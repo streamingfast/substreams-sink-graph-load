@@ -16,9 +16,9 @@ main() {
   $sink run \
     ${out} \
     "api-unstable.streamingfast.io:443" \
-    "https://github.com/streamingfast/substreams-eth-block-meta/releases/download/v0.4.0/substreams-eth-block-meta-v0.4.0.spkg" \
+    "https://github.com/streamingfast/substreams-uniswap-v3/releases/download/v0.1.5-beta/uniswap-v3-v0.1.5-beta.spkg" \
     "graph_out" \
-    10000 \
+    12369900 \
     "$@"
 }
 
