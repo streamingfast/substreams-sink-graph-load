@@ -1,0 +1,6 @@
+.envrc
+.env.release
+.idea
+.release_notes.md
+dist/
+devel/eth-block-meta/csv
