@@ -9,9 +9,11 @@ import (
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
 	sink "github.com/streamingfast/substreams-sink"
+	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
 	pbsubstreams "github.com/streamingfast/substreams/pb/sf/substreams/v1"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type CSVSinker struct {
@@ -95,17 +97,18 @@ func (s *CSVSinker) handleBlockScopedData(ctx context.Context, data *pbsubstream
 		return fmt.Errorf("received data from wrong output module, expected to received from %q but got module's output for %q", s.OutputModuleName(), output.Name)
 	}
 
-	if data.Output != nil && data.Output != nil && len(data.Output.MapOutput.Value) != 0 {
-		s.logger.Info("getting data from block", zap.Stringer("block", data.Clock))
-	} else {
+	if data.Output == nil || data.Output.MapOutput == nil || len(data.Output.MapOutput.Value) == 0 {
 		s.logger.Info("getting empty block", zap.Stringer("block", data.Clock))
+		return nil
 	}
-	//	entityChanges := &pbentity
-	//err := proto.Unmarshal(output.GetMapOutput().GetValue(), dbChanges)
-	//if err != nil {
-	//	return fmt.Errorf("unmarshal database changes: %w", err)
-	//}
 
+	entityChanges := &pbentity.EntityChanges{}
+	err := proto.Unmarshal(output.GetMapOutput().GetValue(), entityChanges)
+	if err != nil {
+		return fmt.Errorf("unmarshal entity changes: %w", err)
+	}
+
+	s.logger.Info("entity changes", zap.Any("entity_changes", entityChanges))
 	//err = s.applyDatabaseChanges(ctx, dataAsBlockRef(data), dbChanges)
 	//if err != nil {
 	//	return fmt.Errorf("apply database changes: %w", err)
