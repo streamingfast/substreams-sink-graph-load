@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -15,10 +14,9 @@ import (
 	"github.com/streamingfast/cli/sflags"
 	"github.com/streamingfast/shutter"
 	sink "github.com/streamingfast/substreams-sink"
+	"github.com/streamingfast/substreams-sink-graphcsv/schema"
 	"github.com/streamingfast/substreams-sink-graphcsv/sinker"
 	"github.com/streamingfast/substreams/manifest"
-	"github.com/vektah/gqlparser/ast"
-	"github.com/vektah/gqlparser/parser"
 	"go.uber.org/zap"
 )
 
@@ -33,6 +31,7 @@ var SinkRunCmd = Command(sinkRunE,
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
 		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
 		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
+		flags.String("chain-id", "ethereum/mainnet", "ID of the chain to appear in POI table")
 	}),
 )
 
@@ -76,6 +75,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
 	bufferSize := sflags.MustGetUint64(cmd, "buffer-size")
 	workingDir := sflags.MustGetString(cmd, "working-dir")
+	chainID := sflags.MustGetString(cmd, "chain-id")
 
 	graphqlSchemaFilename := sflags.MustGetString(cmd, "graphql-schema")
 
@@ -90,14 +90,14 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		if graphqlSchemaFilename == "" {
 			return fmt.Errorf("you must set one of these flags: '--entities' or '--graphql-schema'")
 		}
-		entities, err = getEntitiesFromSchema(graphqlSchemaFilename)
+		entities, err = schema.GetEntityNamesFromSchema(graphqlSchemaFilename)
 		if err != nil {
 			fmt.Println("error is", err)
 			return err
 		}
 	}
 
-	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, zlog, tracer)
+	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, zlog, tracer)
 	if err != nil {
 		return fmt.Errorf("unable to setup csv sinker: %w", err)
 	}
@@ -136,32 +136,6 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 
 	zlog.Info("run terminated gracefully")
 	return nil
-}
-
-func getEntitiesFromSchema(filename string) (entities []string, err error) {
-	graphqlSchemaContent, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-
-	graphqlSchemaDoc, gqlErr := parser.ParseSchema(&ast.Source{
-		Input: string(graphqlSchemaContent),
-	})
-	if gqlErr != nil {
-		return nil, fmt.Errorf("parsing gql: %w", gqlErr)
-	}
-
-	for _, def := range graphqlSchemaDoc.Definitions {
-		for _, dir := range def.Directives {
-			if dir.Name == "entity" {
-				entities = append(entities, def.Name)
-			}
-		}
-	}
-	if len(entities) == 0 {
-		return nil, fmt.Errorf("no entities found from graphql schema file")
-	}
-	return
 }
 
 func getStartBlock(manifestPath, outputModuleName string) (uint64, error) {
