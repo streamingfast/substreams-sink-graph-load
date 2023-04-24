@@ -3,12 +3,16 @@ package sinker
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/streamingfast/bstream"
+	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
 	sink "github.com/streamingfast/substreams-sink"
+	"github.com/streamingfast/substreams-sink-graphcsv/bundler"
+	"github.com/streamingfast/substreams-sink-graphcsv/bundler/writer"
 	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
 	pbsubstreams "github.com/streamingfast/substreams/pb/sf/substreams/v1"
@@ -16,62 +20,73 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type CSVSinker struct {
+type EntitiesSink struct {
 	*shutter.Shutter
 	*sink.Sinker
 	destFolder string
 
+	fileBundlers map[string]*bundler.Bundler
+
 	logger *zap.Logger
 	tracer logging.Tracer
 
-	stats      *Stats
-	lastCursor *sink.Cursor
+	stats *Stats
 }
 
-func New(sink *sink.Sinker, destFolder string, logger *zap.Logger, tracer logging.Tracer) (*CSVSinker, error) {
-	s := &CSVSinker{
+func New(
+	sink *sink.Sinker,
+	destFolder string,
+	workingDir string,
+	entities []string,
+	bundleSize uint64,
+	bufferSize uint64,
+	logger *zap.Logger,
+	tracer logging.Tracer) (*EntitiesSink, error) {
+	s := &EntitiesSink{
 		Shutter: shutter.New(),
 		Sinker:  sink,
 
-		destFolder: destFolder,
-		logger:     logger,
-		tracer:     tracer,
+		fileBundlers: make(map[string]*bundler.Bundler),
+		destFolder:   destFolder,
+		logger:       logger,
+		tracer:       tracer,
 
 		stats: NewStats(logger),
 	}
 
-	s.OnTerminating(func(err error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		s.writeLastCursor(ctx, err)
-	})
+	baseOutputStore, err := dstore.NewJSONLStore(destFolder)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entity := range entities {
+		boundaryWriter := writer.NewBufferedIO(
+			bufferSize,
+			filepath.Join(workingDir, entity),
+			writer.FileTypeJSONL,
+			logger.With(zap.String("entity_name", entity)),
+		)
+		subStore, err := baseOutputStore.SubStore(entity)
+		if err != nil {
+			return nil, err
+		}
+
+		fb, err := bundler.New(bundleSize, boundaryWriter, subStore, logger)
+		if err != nil {
+			return nil, err
+		}
+		s.fileBundlers[entity] = fb
+		fb.Start(s.Sinker.BlockRange().StartBlock())
+	}
 
 	return s, nil
 }
 
-func (s *CSVSinker) writeLastCursor(ctx context.Context, err error) {
-	if s.lastCursor == nil || err != nil {
-		return
-	}
-	// FIXME: write cursor to file
-
-	//_ = s.WriteCursor(ctx, s.OutputModuleHash(), s.lastCursor)
-}
-
-func (s *CSVSinker) Run(ctx context.Context) {
-
-	cursor := sink.MustNewCursor("")
-	// FIXME: get cursor from files
-	//cursor, err := s.GetCursor(ctx, s.OutputModuleHash())
-	//if err != nil && !errors.Is(err, ErrCursorNotFound) {
-	//	s.Shutdown(fmt.Errorf("unable to retrieve cursor: %w", err))
-	//	return
-	//}
-
+func (s *EntitiesSink) Run(ctx context.Context) {
 	s.Sinker.OnTerminating(s.Shutdown)
 	s.OnTerminating(func(err error) {
 		s.stats.LogNow()
-		s.logger.Info("csv sinker terminating", zap.Stringer("last_block_written", s.stats.lastBlock))
+		s.logger.Info("csv sinker terminating", zap.Uint64("last_block_written", s.stats.lastBlock))
 		s.Sinker.Shutdown(err)
 	})
 
@@ -83,14 +98,15 @@ func (s *CSVSinker) Run(ctx context.Context) {
 		logEach = 5 * time.Second
 	}
 
-	s.stats.Start(logEach, cursor)
+	s.stats.Start(logEach)
 
-	//s.logger.Info("starting graphcsv sink", zap.Duration("stats_refresh_each", logEach), zap.Stringer("restarting_at", cursor.Block))
-	fmt.Println("about to run sinker with", cursor.String())
-	s.Sinker.Run(ctx, cursor, sink.NewSinkerHandlers(s.handleBlockScopedData, s.handleBlockUndoSignal))
+	for _, fb := range s.fileBundlers {
+		fb.Launch(context.Background())
+	}
+	s.Sinker.Run(ctx, nil, sink.NewSinkerHandlers(s.handleBlockScopedData, s.handleBlockUndoSignal))
 }
 
-func (s *CSVSinker) handleBlockScopedData(ctx context.Context, data *pbsubstreamsrpc.BlockScopedData, isLive *bool, cursor *sink.Cursor) error {
+func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstreamsrpc.BlockScopedData, isLive *bool, cursor *sink.Cursor) error {
 	output := data.Output
 
 	if output.Name != s.OutputModuleName() {
@@ -109,17 +125,32 @@ func (s *CSVSinker) handleBlockScopedData(ctx context.Context, data *pbsubstream
 	}
 
 	s.logger.Info("entity changes", zap.Any("entity_changes", entityChanges))
+	for _, change := range entityChanges.EntityChanges {
+		jsonlChange, err := bundler.JSONLEncode(change)
+		if err != nil {
+			return err
+		}
+		entityBundler, ok := s.fileBundlers[change.Entity]
+		if !ok {
+			return fmt.Errorf("cannot get bundler writer for entity %s", change.Entity)
+		}
+		entityBundler.Writer().Write(jsonlChange)
+	}
+
+	for _, entityBundler := range s.fileBundlers {
+		entityBundler.Roll(ctx, data.Clock.Number)
+	}
 	//err = s.applyDatabaseChanges(ctx, dataAsBlockRef(data), dbChanges)
 	//if err != nil {
 	//	return fmt.Errorf("apply database changes: %w", err)
 	//}
 
-	s.lastCursor = cursor
+	s.stats.RecordBlock(cursor.Block().Num())
 
 	return nil
 }
 
-func (s *CSVSinker) handleBlockUndoSignal(ctx context.Context, data *pbsubstreamsrpc.BlockUndoSignal, cursor *sink.Cursor) error {
+func (s *EntitiesSink) handleBlockUndoSignal(ctx context.Context, data *pbsubstreamsrpc.BlockUndoSignal, cursor *sink.Cursor) error {
 	return fmt.Errorf("received undo signal but there is no handling of undo, this is because you used `--undo-buffer-size=0` which is invalid right now")
 }
 

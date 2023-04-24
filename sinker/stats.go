@@ -3,9 +3,7 @@ package sinker
 import (
 	"time"
 
-	"github.com/streamingfast/bstream"
 	"github.com/streamingfast/shutter"
-	sink "github.com/streamingfast/substreams-sink"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +12,7 @@ type Stats struct {
 
 	// dbFlushRate    *dmetrics.AvgRatePromCounter
 	// flusehdEntries *dmetrics.ValueFromMetric
-	lastBlock bstream.BlockRef
+	lastBlock uint64
 	logger    *zap.Logger
 }
 
@@ -26,19 +24,15 @@ func NewStats(logger *zap.Logger) *Stats {
 		// flusehdEntries: dmetrics.NewValueFromMetric(FlushedEntriesCount, "entries"),
 		logger: logger,
 
-		lastBlock: unsetBlockRef{},
+		lastBlock: 0,
 	}
 }
 
-func (s *Stats) RecordBlock(block bstream.BlockRef) {
+func (s *Stats) RecordBlock(block uint64) {
 	s.lastBlock = block
 }
 
-func (s *Stats) Start(each time.Duration, cursor *sink.Cursor) {
-	if !cursor.IsBlank() {
-		s.lastBlock = cursor.Block()
-	}
-
+func (s *Stats) Start(each time.Duration) {
 	if s.IsTerminating() || s.IsTerminated() {
 		panic("already shutdown, refusing to start again")
 	}
@@ -59,11 +53,15 @@ func (s *Stats) Start(each time.Duration, cursor *sink.Cursor) {
 }
 
 func (s *Stats) LogNow() {
+	if s.lastBlock == 0 {
+		s.logger.Info("graphcsv sink got no blocks yet")
+		return
+	}
 	// Logging fields order is important as it affects the final rendering, we carefully ordered
 	// them so the development logs looks nicer.
 	s.logger.Info("graphcsv sink stats",
 		// zap.Uint64("flushed_entries", s.flusehdEntries.ValueUint()),
-		zap.Stringer("last_block", s.lastBlock),
+		zap.Uint64("last_block", s.lastBlock),
 	)
 }
 

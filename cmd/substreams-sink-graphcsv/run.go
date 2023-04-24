@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,18 +11,25 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/streamingfast/cli"
 	. "github.com/streamingfast/cli"
+	"github.com/streamingfast/cli/sflags"
 	"github.com/streamingfast/shutter"
 	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-sink-graphcsv/sinker"
+	"github.com/streamingfast/substreams/manifest"
 	"go.uber.org/zap"
 )
 
 var SinkRunCmd = Command(sinkRunE,
-	"run <destination-folder> <endpoint> <manifest> <module> <stopBlock>",
+	"run (--entities|--subgraph-manifest) <destination-folder> <endpoint> <manifest> <module> <stopBlock>",
 	"Runs substreams sinker to CSV files",
 	ExactArgs(5),
 	Flags(func(flags *pflag.FlagSet) {
 		sink.AddFlagsToSet(flags)
+		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
+		flags.Uint64("buffer-size", 1024*1024*1024, "Size of output buffer, in bytes")
+		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
+		flags.String("subgraph-manifest", "", "Path to subgraph manifest file to read the list of entities automatically (alternative to setting 'entities' value)")
+		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
 	}),
 )
 
@@ -40,15 +48,31 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	endpoint := args[1]
 	manifestPath := args[2]
 	outputModuleName := args[3]
-	stopBlock := args[4]
-	if strings.Contains(stopBlock, ":") || strings.Contains(stopBlock, "-") {
+	stopBlock, err := strconv.ParseUint(args[4], 10, 64)
+	if err != nil {
 		return fmt.Errorf("stopBlock must be a uint64")
 	}
 
+	// FIXME: in a function, just to get startBlock, then parse destination-folder
+	pkg, err := manifest.NewReader(manifestPath).Read()
+	if err != nil {
+		return fmt.Errorf("read manifest: %w", err)
+	}
+	graph, err := manifest.NewModuleGraph(pkg.Modules.Modules)
+	if err != nil {
+		return fmt.Errorf("create substreams module graph: %w", err)
+	}
+	module, err := graph.Module(outputModuleName)
+	if err != nil {
+		return fmt.Errorf("create substreams module graph: %w", err)
+	}
+	blockRange := fmt.Sprintf("%d:%d", module.InitialBlock, stopBlock)
+	////////////////////////////3
+
 	sink, err := sink.NewFromViper(
-		"substreams.entity.v1.EntityChanges",
-		endpoint, manifestPath, outputModuleName, stopBlock,
-		"run",
+		cmd,
+		"proto:substreams.entity.v1.EntityChanges",
+		endpoint, manifestPath, outputModuleName, blockRange,
 		zlog,
 		tracer,
 	)
@@ -56,18 +80,27 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to setup sinker: %w", err)
 	}
 
-	csvSinker, err := sinker.New(sink, destFolder, zlog, tracer)
+	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
+	bufferSize := sflags.MustGetUint64(cmd, "buffer-size")
+	workingDir := sflags.MustGetString(cmd, "working-dir")
+	entities := strings.Split(sflags.MustGetString(cmd, "entities"), ",")
+	if len(entities) == 0 || (len(entities) == 1 && len(entities[0]) == 0) {
+		return fmt.Errorf("you must have at least one entity, set by --entities or --subgraph-manifest")
+	}
+	// FIXME: get entities from subgraph-manifest if present, fail if both flags are set
+
+	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, zlog, tracer)
 	if err != nil {
 		return fmt.Errorf("unable to setup csv sinker: %w", err)
 	}
 
-	csvSinker.OnTerminating(app.Shutdown)
+	entitySink.OnTerminating(app.Shutdown)
 	app.OnTerminating(func(err error) {
-		csvSinker.Shutdown(err)
+		entitySink.Shutdown(err)
 	})
 
 	go func() {
-		csvSinker.Run(ctx)
+		entitySink.Run(ctx)
 	}()
 
 	zlog.Info("ready, waiting for signal to quit")
