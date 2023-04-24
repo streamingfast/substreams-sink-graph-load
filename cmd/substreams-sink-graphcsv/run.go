@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -16,11 +17,13 @@ import (
 	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-sink-graphcsv/sinker"
 	"github.com/streamingfast/substreams/manifest"
+	"github.com/vektah/gqlparser/ast"
+	"github.com/vektah/gqlparser/parser"
 	"go.uber.org/zap"
 )
 
 var SinkRunCmd = Command(sinkRunE,
-	"run (--entities|--subgraph-manifest) <destination-folder> <endpoint> <manifest> <module> <stopBlock>",
+	"run (--entities|--graphql-schema) <destination-folder> <endpoint> <manifest> <module> <stopBlock>",
 	"Runs substreams sinker to CSV files",
 	ExactArgs(5),
 	Flags(func(flags *pflag.FlagSet) {
@@ -28,7 +31,7 @@ var SinkRunCmd = Command(sinkRunE,
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
 		flags.Uint64("buffer-size", 1024*1024*1024, "Size of output buffer, in bytes")
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
-		flags.String("subgraph-manifest", "", "Path to subgraph manifest file to read the list of entities automatically (alternative to setting 'entities' value)")
+		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
 		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
 	}),
 )
@@ -53,21 +56,11 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("stopBlock must be a uint64")
 	}
 
-	// FIXME: in a function, just to get startBlock, then parse destination-folder
-	pkg, err := manifest.NewReader(manifestPath).Read()
+	startBlock, err := getStartBlock(manifestPath, outputModuleName)
 	if err != nil {
-		return fmt.Errorf("read manifest: %w", err)
+		return fmt.Errorf("getting startblock from substreams manifest: %w", err)
 	}
-	graph, err := manifest.NewModuleGraph(pkg.Modules.Modules)
-	if err != nil {
-		return fmt.Errorf("create substreams module graph: %w", err)
-	}
-	module, err := graph.Module(outputModuleName)
-	if err != nil {
-		return fmt.Errorf("create substreams module graph: %w", err)
-	}
-	blockRange := fmt.Sprintf("%d:%d", module.InitialBlock, stopBlock)
-	////////////////////////////3
+	blockRange := fmt.Sprintf("%d:%d", startBlock, stopBlock)
 
 	sink, err := sink.NewFromViper(
 		cmd,
@@ -83,11 +76,26 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
 	bufferSize := sflags.MustGetUint64(cmd, "buffer-size")
 	workingDir := sflags.MustGetString(cmd, "working-dir")
-	entities := strings.Split(sflags.MustGetString(cmd, "entities"), ",")
-	if len(entities) == 0 || (len(entities) == 1 && len(entities[0]) == 0) {
-		return fmt.Errorf("you must have at least one entity, set by --entities or --subgraph-manifest")
+
+	graphqlSchemaFilename := sflags.MustGetString(cmd, "graphql-schema")
+
+	var entities []string
+	entitiesList := sflags.MustGetString(cmd, "entities")
+	if entitiesList != "" {
+		if graphqlSchemaFilename != "" {
+			return fmt.Errorf("you must only use one of these flags: '--entities' or '--graphql-schema'")
+		}
+		entities = strings.Split(entitiesList, ",")
+	} else {
+		if graphqlSchemaFilename == "" {
+			return fmt.Errorf("you must set one of these flags: '--entities' or '--graphql-schema'")
+		}
+		entities, err = getEntitiesFromSchema(graphqlSchemaFilename)
+		if err != nil {
+			fmt.Println("error is", err)
+			return err
+		}
 	}
-	// FIXME: get entities from subgraph-manifest if present, fail if both flags are set
 
 	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, zlog, tracer)
 	if err != nil {
@@ -128,4 +136,47 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 
 	zlog.Info("run terminated gracefully")
 	return nil
+}
+
+func getEntitiesFromSchema(filename string) (entities []string, err error) {
+	graphqlSchemaContent, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	graphqlSchemaDoc, gqlErr := parser.ParseSchema(&ast.Source{
+		Input: string(graphqlSchemaContent),
+	})
+	if gqlErr != nil {
+		return nil, fmt.Errorf("parsing gql: %w", gqlErr)
+	}
+
+	for _, def := range graphqlSchemaDoc.Definitions {
+		for _, dir := range def.Directives {
+			if dir.Name == "entity" {
+				entities = append(entities, def.Name)
+			}
+		}
+	}
+	if len(entities) == 0 {
+		return nil, fmt.Errorf("no entities found from graphql schema file")
+	}
+	return
+}
+
+func getStartBlock(manifestPath, outputModuleName string) (uint64, error) {
+	pkg, err := manifest.NewReader(manifestPath).Read()
+	if err != nil {
+		return 0, fmt.Errorf("read manifest: %w", err)
+	}
+	graph, err := manifest.NewModuleGraph(pkg.Modules.Modules)
+	if err != nil {
+		return 0, fmt.Errorf("create substreams module graph: %w", err)
+	}
+	module, err := graph.Module(outputModuleName)
+	if err != nil {
+		return 0, fmt.Errorf("create substreams module graph: %w", err)
+	}
+
+	return module.InitialBlock, nil
 }

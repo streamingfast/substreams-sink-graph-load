@@ -17,6 +17,7 @@ require (
 	github.com/streamingfast/substreams v1.0.2-0.20230418195519-fa17a36fd728
 	github.com/streamingfast/substreams-sink v0.1.1-0.20230420161857-72fa2fe5072f
 	github.com/stretchr/testify v1.8.1
+	github.com/vektah/gqlparser v1.3.1
 	go.uber.org/zap v1.23.0
 	google.golang.org/protobuf v1.28.2-0.20230222093303-bc1253ad3743
 )
@@ -79,7 +80,6 @@ require (
 	github.com/streamingfast/dgrpc v0.0.0-20230417152409-2ee737f143dd // indirect
 	github.com/streamingfast/opaque v0.0.0-20210811180740-0c01d37ea308 // indirect
 	github.com/streamingfast/pbgo v0.0.6-0.20220630154121-2e8bba36234e // indirect
-	github.com/streamingfast/substreams-sink-files v0.2.1-0.20230420211913-3992a57b704f // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/yourbasic/graph v0.0.0-20210606180040-8ecfec1c2869 // indirect
 	go.opencensus.io v0.24.0 // indirect

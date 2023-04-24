@@ -5,3 +5,4 @@
 dist/
 devel/eth-block-meta/csv
 /out
+/schema.graphql
