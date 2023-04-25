@@ -20,37 +20,6 @@ type Entity struct {
 	Fields     map[string]interface{}
 }
 
-func (e *Entity) MarshalCSV(desc *schema.EntityDesc, stopBlock uint64) []byte {
-
-	out := fmt.Sprintf("%s,%q", e.Fields["id"], blockRange(e.StartBlock, stopBlock))
-	for _, f := range desc.OrderedFields() {
-		out = fmt.Sprintf("%s,%s", out, formatField(e.Fields[f.Name], f.Type))
-	}
-	out = fmt.Sprintf("%s,\n", out)
-	return []byte(out)
-}
-
-func formatField(f interface{}, t schema.FieldType) string {
-	switch t {
-	case schema.FieldTypeID, schema.FieldTypeString:
-		return fmt.Sprintf("%q", f)
-	case schema.FieldTypeBytes:
-		return fmt.Sprintf("%q", f)
-	case schema.FieldTypeBigInt:
-		return fmt.Sprintf("%s", f)
-	case schema.FieldTypeBigDecimal:
-		return fmt.Sprintf("%s", f)
-	case schema.FieldTypeInt:
-		return fmt.Sprintf("%d", f)
-	case schema.FieldTypeFloat:
-		return fmt.Sprintf("%f", f)
-	case schema.FieldTypeBoolean:
-		return fmt.Sprintf("%t", f)
-	default:
-		panic(fmt.Errorf("invalid field type: %q", t))
-	}
-}
-
 func blockRange(start, stop uint64) string {
 	if stop == 0 {
 		return fmt.Sprintf("[%d,)", start)

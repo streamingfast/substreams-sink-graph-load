@@ -27,7 +27,6 @@ type Bundler struct {
 	activeBoundary *bstream.Range
 	uploadQueue    *dhammer.Nailer
 	zlogger        *zap.Logger
-	started        bool
 }
 
 func New(
@@ -63,29 +62,38 @@ func (b *Bundler) Launch(ctx context.Context) {
 		b.Close()
 	})
 	b.uploadQueue.Start(ctx)
-	b.started = true
+
+	go func() {
+		for v := range b.uploadQueue.Out {
+			bf := v.(*boundaryFile)
+			b.zlogger.Debug("uploaded file", zap.String("filename", bf.name))
+		}
+		if b.uploadQueue.Err() != nil {
+			b.Shutdown(fmt.Errorf("upload queue failed: %w", b.uploadQueue.Err()))
+		}
+	}()
+
 	b.uploadQueue.OnTerminating(func(err error) {
 		b.Shutdown(fmt.Errorf("upload queue failed: %w", b.uploadQueue.Err()))
 	})
 }
 
 func (b *Bundler) Close() {
-	b.zlogger.Info("closing upload queue")
+	b.zlogger.Debug("closing upload queue")
 	b.uploadQueue.Close()
-	b.zlogger.Info("waiting till queue is drained")
+	b.zlogger.Debug("waiting till queue is drained")
 	b.uploadQueue.WaitUntilEmpty(context.Background())
-	b.zlogger.Info("boundary uploaded completed")
+	b.zlogger.Debug("boundary upload completed")
 }
 
 func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 	if b.activeBoundary.Contains(blockNum) {
-		fmt.Println("boundary", b.activeBoundary, "contains", blockNum)
 		return nil
 	}
 
 	boundaries := boundariesToSkip(b.activeBoundary, blockNum, b.blockCount)
 
-	b.zlogger.Info("block_num is not in active boundary",
+	b.zlogger.Debug("block_num is not in active boundary",
 		zap.Stringer("active_boundary", b.activeBoundary),
 		zap.Int("boundaries_to_skip", len(boundaries)),
 		zap.Uint64("block_num", blockNum),
@@ -122,26 +130,25 @@ func (b *Bundler) Start(blockNum uint64) error {
 	boundaryRange := b.newBoundary(blockNum)
 	b.activeBoundary = boundaryRange
 
-	b.zlogger.Info("starting new file boundary", zap.Stringer("boundary", boundaryRange))
+	b.zlogger.Debug("starting new file boundary", zap.Stringer("boundary", boundaryRange))
 	if err := b.boundaryWriter.StartBoundary(boundaryRange); err != nil {
 		return fmt.Errorf("start file: %w", err)
 	}
 
 	b.stats.startBoundary(boundaryRange)
-	b.zlogger.Info("boundary started", zap.Stringer("boundary", boundaryRange))
+	b.zlogger.Debug("boundary started", zap.Stringer("boundary", boundaryRange))
 	return nil
 }
 
 func (b *Bundler) stop(ctx context.Context) error {
-	b.zlogger.Info("stopping file boundary")
+	b.zlogger.Debug("stopping file boundary")
 
 	file, err := b.boundaryWriter.CloseBoundary(ctx)
 	if err != nil {
 		return fmt.Errorf("closing file: %w", err)
 	}
 
-	b.zlogger.Info("queuing boundary upload",
-		zap.Bool("started", b.started),
+	b.zlogger.Debug("queuing boundary upload",
 		zap.Stringer("boundary", b.activeBoundary),
 	)
 	b.uploadQueue.In <- &boundaryFile{
@@ -188,7 +195,7 @@ func (b *Bundler) uploadBoundary(ctx context.Context, v interface{}) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("unable to upload: %w", err)
 	}
-	b.zlogger.Info("boundary uploaded",
+	b.zlogger.Debug("boundary file uploaded",
 		zap.String("boundary", bf.name),
 		zap.String("output_path", outputPath),
 	)

@@ -153,10 +153,12 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		return fmt.Errorf("unmarshal entity changes: %w", err)
 	}
 
-	if data.Output == nil || data.Output.MapOutput == nil || len(data.Output.MapOutput.Value) == 0 {
-		s.logger.Info("getting empty block", zap.Stringer("block", data.Clock))
-	} else {
-		s.logger.Info("entity changes", zap.Any("entity_changes", entityChanges))
+	if s.tracer.Enabled() {
+		if data.Output == nil || data.Output.MapOutput == nil || len(data.Output.MapOutput.Value) == 0 {
+			s.logger.Debug("getting empty block", zap.Stringer("block", data.Clock))
+		} else {
+			s.logger.Debug("entity changes", zap.Any("entity_changes", entityChanges))
+		}
 	}
 
 	for _, entityBundler := range s.fileBundlers {

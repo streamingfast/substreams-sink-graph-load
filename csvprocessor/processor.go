@@ -21,8 +21,8 @@ import (
 type Processor struct {
 	*shutter.Shutter
 
-	inputStore  dstore.Store
-	outputStore dstore.Store
+	inputStore dstore.Store
+	csvOutput  *WriterManager
 
 	entityDesc *schema.EntityDesc
 
@@ -67,7 +67,8 @@ func New(
 	}
 
 	p.inputStore = inputStore
-	p.outputStore = outputStore
+
+	p.csvOutput = NewWriterManager(bundleSize, outputStore)
 
 	entities, err := schema.GetEntitiesFromSchema(schemaFilename)
 	if err != nil {
@@ -180,7 +181,14 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 
 		if p.stopBlock != 0 && ch.BlockNum > p.stopBlock {
 			p.logger.Info("passed stopBlock", zap.Uint64("change block_num", ch.BlockNum), zap.Uint64("stop_block", p.stopBlock))
+			if err := p.csvOutput.Close(); err != nil {
+				return err
+			}
 			return nil
+		}
+
+		if err := p.csvOutput.Roll(ctx, ch.BlockNum); err != nil {
+			return err
 		}
 
 		newEnt, err := newEntity(ch, p.entityDesc)
@@ -190,11 +198,6 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 
 		prev, found := p.entities[ch.EntityChange.ID]
 
-		writeCSVLine := func(out []byte) error {
-			fmt.Println(string(out))
-			return nil
-		}
-
 		switch ch.EntityChange.Operation {
 		case pbentity.EntityChange_CREATE:
 			if found {
@@ -202,24 +205,33 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			}
 
 			if p.entityDesc.Immutable {
-				writeCSVLine(newEnt.MarshalCSV(p.entityDesc, 0))
+				if err := p.csvOutput.Write(newEnt, p.entityDesc, 0); err != nil {
+					return err
+				}
 				continue
 			}
 			p.entities[ch.EntityChange.ID] = newEnt
 
 		case pbentity.EntityChange_UPDATE:
 			if p.entityDesc.Immutable {
-				writeCSVLine(newEnt.MarshalCSV(p.entityDesc, 0))
+				if err := p.csvOutput.Write(newEnt, p.entityDesc, 0); err != nil {
+					return err
+				}
 				continue
-				// return fmt.Errorf("entity %q got updated but should be immutable", ch.EntityChange.ID) // FIXME: enforce this at some point
+				// FIXME: enforce this at some point
+				// return fmt.Errorf("entity %q got updated but should be immutable", ch.EntityChange.ID)
 			} else {
 			}
 			if !found {
 				p.entities[ch.EntityChange.ID] = newEnt
 				continue
-				//return fmt.Errorf("entity %q got updated but previous value not found", ch.EntityChange.ID) // FIXME: enforce this at some point
+				// FIXME: enforce this at some point
+				//return fmt.Errorf("entity %q got updated but previous value not found", ch.EntityChange.ID)
 			}
-			writeCSVLine(prev.MarshalCSV(p.entityDesc, ch.BlockNum))
+
+			if err := p.csvOutput.Write(prev, p.entityDesc, ch.BlockNum); err != nil {
+				return err
+			}
 			prev.Update(newEnt)
 			p.entities[ch.EntityChange.ID] = prev
 
@@ -230,7 +242,10 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			if !found {
 				return fmt.Errorf("entity %q got updated but previous value not found", ch.EntityChange.ID)
 			}
-			writeCSVLine(prev.MarshalCSV(p.entityDesc, ch.BlockNum))
+
+			if err := p.csvOutput.Write(prev, p.entityDesc, ch.BlockNum); err != nil {
+				return err
+			}
 			delete(p.entities, ch.EntityChange.ID)
 
 		case pbentity.EntityChange_FINAL:
@@ -238,7 +253,9 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 				continue
 			}
 
-			writeCSVLine(prev.MarshalCSV(p.entityDesc, 0))
+			if err := p.csvOutput.Write(prev, p.entityDesc, 0); err != nil {
+				return err
+			}
 			delete(p.entities, ch.EntityChange.ID)
 		}
 

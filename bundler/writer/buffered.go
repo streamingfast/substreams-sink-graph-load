@@ -72,14 +72,14 @@ func (s *BufferedIO) CloseBoundary(ctx context.Context) (Uploadeable, error) {
 	}
 
 	if s.activeFile.writer.AllDataFitInMemory() {
-		s.zlogger.Info("all data from range is in memory, no need to flush")
+		s.zlogger.Debug("all data from range is in memory, no need to flush")
 		return &dataFile{
 			reader:         bytes.NewReader(s.activeFile.writer.MemoryData()),
 			outputFilename: s.activeFile.outputFilename,
 		}, nil
 	}
 
-	s.zlogger.Info("flushing buffered writter")
+	s.zlogger.Debug("flushing buffered writter")
 	if err := s.activeFile.writer.Flush(); err != nil {
 		return nil, fmt.Errorf("flushing buffered active writer: %w", err)
 	}
