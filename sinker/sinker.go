@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/streamingfast/bstream"
@@ -17,6 +18,7 @@ import (
 	"github.com/streamingfast/substreams-sink-graphcsv/bundler"
 	"github.com/streamingfast/substreams-sink-graphcsv/bundler/writer"
 	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
+	"github.com/streamingfast/substreams-sink-graphcsv/schema"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
 	pbsubstreams "github.com/streamingfast/substreams/pb/sf/substreams/v1"
 	"go.uber.org/zap"
@@ -74,7 +76,7 @@ func New(
 		s.fileBundlers[entity] = fb
 	}
 
-	poiBundler, err := getBundler("poi2$", s.Sinker.BlockRange().StartBlock(), bundleSize, bufferSize, baseOutputStore, workingDir, logger)
+	poiBundler, err := getBundler(schema.PoiEntityName, s.Sinker.BlockRange().StartBlock(), bundleSize, bufferSize, baseOutputStore, workingDir, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +158,11 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 	} else {
 		s.logger.Info("entity changes", zap.Any("entity_changes", entityChanges))
 	}
+
+	for _, entityBundler := range s.fileBundlers {
+		entityBundler.Roll(ctx, data.Clock.Number)
+	}
+
 	for _, change := range entityChanges.EntityChanges {
 		jsonlChange, err := bundler.JSONLEncode(&pbentity.EntityChangeAtBlockNum{
 			EntityChange: change,
@@ -165,24 +172,21 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 			return err
 		}
 		digest.Write(jsonlChange)
-		entityBundler, ok := s.fileBundlers[change.Entity]
+		entity := strings.ToLower(change.Entity)
+		entityBundler, ok := s.fileBundlers[entity]
 		if !ok {
-			return fmt.Errorf("cannot get bundler writer for entity %s", change.Entity)
+			return fmt.Errorf("cannot get bundler writer for entity %s", entity)
 		}
 		entityBundler.Writer().Write(jsonlChange)
 	}
 
-	for _, entityBundler := range s.fileBundlers {
-		entityBundler.Roll(ctx, data.Clock.Number)
-	}
-
+	s.poiBundler.Roll(ctx, data.Clock.Number)
 	poiEntity := getPOIEntity(digest.Sum(nil), s.chainID, data.Clock.Number)
 	jsonlPOI, err := bundler.JSONLEncode(poiEntity)
 	if err != nil {
 		return err
 	}
 	s.poiBundler.Writer().Write(jsonlPOI)
-	s.poiBundler.Roll(ctx, data.Clock.Number)
 
 	s.stats.RecordBlock(cursor.Block().Num())
 
@@ -190,7 +194,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 }
 
 func (s *EntitiesSink) handleBlockUndoSignal(ctx context.Context, data *pbsubstreamsrpc.BlockUndoSignal, cursor *sink.Cursor) error {
-	return fmt.Errorf("received undo signal but there is no handling of undo, this is because you used `--undo-buffer-size=0` which is invalid right now")
+	return fmt.Errorf("received undo signal: should not happen, substreams connection should be 'final-blocks-only' ")
 }
 
 func dataAsBlockRef(blockData *pbsubstreamsrpc.BlockScopedData) bstream.BlockRef {
@@ -205,7 +209,7 @@ func getPOIEntity(digest []byte, chainID string, blockNum uint64) *pbentity.Enti
 	return &pbentity.EntityChangeAtBlockNum{
 		BlockNum: blockNum,
 		EntityChange: &pbentity.EntityChange{
-			Entity: "poi2$",
+			Entity: schema.PoiEntityName,
 			Id:     chainID,
 			// Ordinal
 			Operation: pbentity.EntityChange_UPDATE,

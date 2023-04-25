@@ -27,7 +27,7 @@ func newBaseWriter(fileType FileType, zlogger *zap.Logger) baseWriter {
 }
 
 func (b baseWriter) filename(blockRange *bstream.Range) string {
-	return fmt.Sprintf("%010d-%010d", blockRange.StartBlock(), *blockRange.EndBlock())
+	return fmt.Sprintf("%010d-%010d", blockRange.StartBlock(), *blockRange.EndBlock()-1)
 }
 
 func (b baseWriter) Type() FileType {

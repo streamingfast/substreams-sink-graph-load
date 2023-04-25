@@ -27,6 +27,7 @@ type Bundler struct {
 	activeBoundary *bstream.Range
 	uploadQueue    *dhammer.Nailer
 	zlogger        *zap.Logger
+	started        bool
 }
 
 func New(
@@ -62,6 +63,7 @@ func (b *Bundler) Launch(ctx context.Context) {
 		b.Close()
 	})
 	b.uploadQueue.Start(ctx)
+	b.started = true
 	b.uploadQueue.OnTerminating(func(err error) {
 		b.Shutdown(fmt.Errorf("upload queue failed: %w", b.uploadQueue.Err()))
 	})
@@ -77,6 +79,7 @@ func (b *Bundler) Close() {
 
 func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 	if b.activeBoundary.Contains(blockNum) {
+		fmt.Println("boundary", b.activeBoundary, "contains", blockNum)
 		return nil
 	}
 
@@ -138,6 +141,7 @@ func (b *Bundler) stop(ctx context.Context) error {
 	}
 
 	b.zlogger.Info("queuing boundary upload",
+		zap.Bool("started", b.started),
 		zap.Stringer("boundary", b.activeBoundary),
 	)
 	b.uploadQueue.In <- &boundaryFile{
