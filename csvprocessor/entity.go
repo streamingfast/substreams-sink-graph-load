@@ -11,7 +11,7 @@ const FieldTypeBigint = "Bigint"
 const FieldTypeString = "String_"
 const FieldTypeBigdecimal = "Bigdecimal"
 const FieldTypeBytes = "Bytes"
-const FieldTypeInt = "Int"
+const FieldTypeInt = "Int32"
 const FieldTypeFloat = "Float"
 const FieldTypeBoolean = "Boolean"
 
@@ -43,7 +43,9 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 	e := &Entity{
 		StartBlock: in.BlockNum,
 	}
-	e.Fields = make(map[string]interface{})
+	e.Fields = map[string]interface{}{
+		"id": in.EntityChange.ID,
+	}
 	for _, f := range in.EntityChange.Fields {
 		fieldDesc, ok := desc.Fields[f.Name]
 		if !ok {
@@ -71,9 +73,37 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 			return nil, fmt.Errorf("invalid field type: %q", fieldDesc.Type)
 		}
 
+		if fieldDesc.Array {
+			arr, ok := f.NewValue.Typed["Array"]
+			if !ok {
+				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", f.Name, fieldDesc.Type, f.NewValue.Typed)
+
+			}
+			asMap, ok := arr.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", f.Name, fieldDesc.Type, arr)
+			}
+			val, ok := asMap["value"]
+			if !ok {
+				return nil, fmt.Errorf("invalid field %q: expected word 'value' under map, found %+v", f.Name, asMap)
+			}
+
+			array, ok := val.([]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid field %q: expected array for map value, found %+v", f.Name, val)
+			}
+			out := make([]interface{}, len(array))
+			for i := range array {
+				out[i] = array[i].(map[string]interface{})["Typed"].(map[string]interface{})[expectedTypedField]
+			}
+			e.Fields[f.Name] = out
+
+			continue
+		}
+
 		v, ok := f.NewValue.Typed[expectedTypedField]
 		if !ok {
-			return nil, fmt.Errorf("invalid field %q: wrong type %q", f.Name, fieldDesc.Type)
+			return nil, fmt.Errorf("invalid field %q: wrong type %q, got %+v", f.Name, fieldDesc.Type, f.NewValue.Typed)
 		}
 		e.Fields[f.Name] = v
 	}

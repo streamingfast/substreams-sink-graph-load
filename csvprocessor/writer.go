@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/streamingfast/bstream"
 	"github.com/streamingfast/dstore"
@@ -95,12 +96,12 @@ func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Write
 
 func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) error {
 	records := []string{
-		formatField(e.Fields["id"], schema.FieldTypeID),
+		formatField(e.Fields["id"], schema.FieldTypeID, false, false),
 		blockRange(e.StartBlock, stopBlock),
 	}
 
 	for _, f := range desc.OrderedFields() {
-		records = append(records, formatField(e.Fields[f.Name], f.Type))
+		records = append(records, formatField(e.Fields[f.Name], f.Type, f.Array, f.Nullable))
 	}
 
 	if err := c.csvWriter.Write(records); err != nil {
@@ -109,21 +110,99 @@ func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) err
 	return nil
 }
 
-func formatField(f interface{}, t schema.FieldType) string {
+func panicIfNotNullable(isNullable bool) {
+	if !isNullable {
+		panic("invalid field: not nullable")
+	}
+}
+
+func toEscapedStringArray(in []interface{}, formatter string) string {
+	outs := make([]string, len(in))
+	for i := range in {
+		formatted := fmt.Sprintf(formatter, in[i])
+		outs[i] = strings.ReplaceAll(strings.ReplaceAll(formatted, `\`, `\\`), `,`, `\,`)
+	}
+	return strings.Join(outs, ",")
+}
+
+func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {
 	switch t {
 	case schema.FieldTypeID, schema.FieldTypeString:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return ""
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%s")
+		}
 		return fmt.Sprintf("%s", f)
 	case schema.FieldTypeBytes:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return ""
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%s")
+		}
 		return fmt.Sprintf("%s", f)
 	case schema.FieldTypeBigInt:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return "0"
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%s")
+		}
 		return fmt.Sprintf("%s", f)
 	case schema.FieldTypeBigDecimal:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return "0"
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%s")
+		}
 		return fmt.Sprintf("%s", f)
 	case schema.FieldTypeInt:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return "0"
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%d")
+		}
 		return fmt.Sprintf("%d", f)
 	case schema.FieldTypeFloat:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return "0"
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%f")
+		}
 		return fmt.Sprintf("%f", f)
 	case schema.FieldTypeBoolean:
+		if f == nil {
+			if isNullable {
+				return "NULL"
+			}
+			return "false"
+		}
+		if isArray {
+			return toEscapedStringArray(f.([]interface{}), "%t")
+		}
 		return fmt.Sprintf("%t", f)
 	default:
 		panic(fmt.Errorf("invalid field type: %q", t))
