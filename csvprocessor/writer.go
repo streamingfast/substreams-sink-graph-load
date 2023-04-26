@@ -13,10 +13,10 @@ import (
 )
 
 type WriterManager struct {
-	current    *Writer
-	stopBlock  uint64
-	bundleSize uint64
-	store      dstore.Store
+	current      *Writer
+	currentRange *bstream.Range
+	bundleSize   uint64
+	store        dstore.Store
 }
 
 func NewWriterManager(bundleSize uint64, store dstore.Store) *WriterManager {
@@ -27,17 +27,32 @@ func NewWriterManager(bundleSize uint64, store dstore.Store) *WriterManager {
 }
 
 func (wm *WriterManager) setNewWriter(ctx context.Context, blockNum uint64) error {
-	r, err := bstream.NewRangeContaining(blockNum, wm.bundleSize)
-	if err != nil {
-		return err
+	var nextRange *bstream.Range
+
+	if wm.currentRange == nil {
+		r, err := bstream.NewRangeContaining(blockNum, wm.bundleSize)
+		if err != nil {
+			return err
+		}
+		nextRange = r
+	} else {
+		r := wm.currentRange
+		for {
+			if r.Contains(blockNum) {
+				nextRange = r
+				break
+			}
+			r = r.Next(wm.bundleSize)
+		}
 	}
 
-	writer, err := NewWriter(ctx, wm.store, fileNameFromRange(r))
+	writer, err := NewWriter(ctx, wm.store, fileNameFromRange(nextRange))
 	if err != nil {
 		return err
 	}
 
 	wm.current = writer
+	wm.currentRange = nextRange
 	return nil
 }
 
@@ -45,8 +60,7 @@ func (wm *WriterManager) Roll(ctx context.Context, blockNum uint64) error {
 	if wm.current == nil {
 		return wm.setNewWriter(ctx, blockNum)
 	}
-	if blockNum > wm.stopBlock {
-
+	if wm.currentRange.ReachedEndBlock(blockNum) {
 		if err := wm.current.Close(); err != nil {
 			return err
 		}
@@ -68,7 +82,6 @@ type Writer struct {
 	done      chan struct{}
 	csvWriter *csv.Writer
 	filename  string
-	StopBlock uint64
 }
 
 func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Writer, error) {
@@ -101,7 +114,11 @@ func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) err
 	}
 
 	for _, f := range desc.OrderedFields() {
-		records = append(records, formatField(e.Fields[f.Name], f.Type, f.Array, f.Nullable))
+		if f.Name == "id" {
+			continue
+		}
+		out := formatField(e.Fields[f.Name], f.Type, f.Array, f.Nullable)
+		records = append(records, out)
 	}
 
 	if err := c.csvWriter.Write(records); err != nil {
@@ -122,7 +139,7 @@ func toEscapedStringArray(in []interface{}, formatter string) string {
 		formatted := fmt.Sprintf(formatter, in[i])
 		outs[i] = strings.ReplaceAll(strings.ReplaceAll(formatted, `\`, `\\`), `,`, `\,`)
 	}
-	return strings.Join(outs, ",")
+	return "{" + strings.Join(outs, ",") + "}"
 }
 
 func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {

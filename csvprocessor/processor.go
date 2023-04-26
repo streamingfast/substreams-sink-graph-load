@@ -150,6 +150,15 @@ func (p *Processor) run(ctx context.Context) error {
 		}
 
 	}
+	if endRange > p.stopBlock {
+		endRange = p.stopBlock
+	}
+
+	// ensure we create the last file
+	if err := p.csvOutput.Roll(ctx, endRange); err != nil {
+		return err
+	}
+	p.csvOutput.current.Close()
 
 	return nil
 }

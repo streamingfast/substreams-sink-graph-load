@@ -25,7 +25,7 @@ func blockRange(start, stop uint64) string {
 		return fmt.Sprintf("[%d,)", start)
 	}
 
-	return fmt.Sprintf("[%d,%d]", start, stop)
+	return fmt.Sprintf("[%d,%d)", start, stop)
 }
 
 func (e *Entity) Update(newEnt *Entity) {
@@ -85,7 +85,8 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 			}
 			val, ok := asMap["value"]
 			if !ok {
-				return nil, fmt.Errorf("invalid field %q: expected word 'value' under map, found %+v", f.Name, asMap)
+				e.Fields[f.Name] = []interface{}{}
+				continue
 			}
 
 			array, ok := val.([]interface{})
