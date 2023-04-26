@@ -58,7 +58,7 @@ func TestNewBufferedIO(t *testing.T) {
 
 				assert.Len(t, writtenFiles, 0)
 				assert.Equal(t, map[string][]byte{
-					"0000000000-0000000010": []byte(`{first}{second}`),
+					"0000000000-0000000009": []byte(`{first}{second}`),
 				}, output.Files)
 			},
 		},
@@ -84,7 +84,7 @@ func TestNewBufferedIO(t *testing.T) {
 
 				assert.ElementsMatch(t, []string{"/0000000000-0000000010.tmp.jsonl"}, writtenFiles)
 				assert.Equal(t, map[string][]byte{
-					"0000000000-0000000010": []byte(`{first}{second}`),
+					"0000000000-0000000009": []byte(`{first}{second}`),
 				}, output.Files)
 			},
 		},

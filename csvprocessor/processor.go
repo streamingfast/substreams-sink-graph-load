@@ -28,7 +28,6 @@ type Processor struct {
 
 	entities map[string]*Entity
 
-	startBlock uint64
 	stopBlock  uint64
 	bundleSize uint64
 
@@ -40,7 +39,6 @@ func New(
 	srcFolder string,
 	destFolder string,
 	entity string,
-	startBlock uint64,
 	stopBlock uint64,
 	bundleSize uint64,
 	schemaFilename string,
@@ -49,7 +47,6 @@ func New(
 	p := &Processor{
 		Shutter:    shutter.New(),
 		entities:   make(map[string]*Entity),
-		startBlock: startBlock,
 		stopBlock:  stopBlock,
 		bundleSize: bundleSize,
 		logger:     logger,
@@ -116,10 +113,6 @@ func (p *Processor) run(ctx context.Context) error {
 				return fmt.Errorf("broken file contiguity at %q (previous range end was %d)", filename, endRange)
 			}
 			endRange = endBlockNum
-		}
-
-		if endBlockNum <= p.startBlock {
-			return nil
 		}
 
 		entitiesToLoad = append(entitiesToLoad, filename)

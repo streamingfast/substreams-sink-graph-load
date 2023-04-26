@@ -19,15 +19,14 @@ import (
 )
 
 var toCSVCmd = Command(toCSVE,
-	"tocsv <source-folder> <destination-folder> <entity> <startBlock> <stopBlock>",
+	"tocsv <source-folder> <destination-folder> <entity> <stopBlock>",
 	`Process {source-folder>/{entity} to create CSV files ready for insertion into postgresql to {destination-folder}/{entity}
 		<source-folder> Folder containing one folder per entity with jsonl files, created with 'run' command.
 		<destination-folder> Folder where CSV files will be created (a subfolder named as the entity will be automatically appended)
 		<entity> Name of the entity (ex: 'transfers') that will be processed. You need to run one instance of 'tocsv' per instance.
-		<startBlock> Must be the substreams 'initialBlock' for the graph_out module.
 		<stopBlock> Where you want to stop creating CSV (usually, very close to chain HEAD)
 	`,
-	ExactArgs(5),
+	ExactArgs(4),
 	Flags(func(flags *pflag.FlagSet) {
 		sink.AddFlagsToSet(flags)
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
@@ -50,14 +49,9 @@ func toCSVE(cmd *cobra.Command, args []string) error {
 	destFolder := args[1]
 	entity := args[2]
 
-	startBlock, err := strconv.ParseUint(args[3], 10, 64)
+	stopBlock, err := strconv.ParseUint(args[3], 10, 64)
 	if err != nil {
-		return fmt.Errorf("startBlock must be a uint64")
-	}
-
-	stopBlock, err := strconv.ParseUint(args[4], 10, 64)
-	if err != nil {
-		return fmt.Errorf("stopBlock must be a uint64, got %q", args[4])
+		return fmt.Errorf("stopBlock must be a uint64, got %q", args[3])
 	}
 
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
@@ -67,7 +61,6 @@ func toCSVE(cmd *cobra.Command, args []string) error {
 		sourceFolder,
 		destFolder,
 		entity,
-		startBlock,
 		stopBlock,
 		bundleSize,
 		graphqlSchemaFilename,
