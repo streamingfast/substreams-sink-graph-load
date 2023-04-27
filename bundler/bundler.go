@@ -25,12 +25,14 @@ type Bundler struct {
 	outputStore    dstore.Store
 	fileType       writer.FileType
 	activeBoundary *bstream.Range
+	stopBlock      uint64
 	uploadQueue    *dhammer.Nailer
 	zlogger        *zap.Logger
 }
 
 func New(
 	size uint64,
+	stopBlock uint64,
 	boundaryWriter writer.Writer,
 	outputStore dstore.Store,
 	zlogger *zap.Logger,
@@ -41,6 +43,7 @@ func New(
 		boundaryWriter: boundaryWriter,
 		outputStore:    outputStore,
 		blockCount:     size,
+		stopBlock:      stopBlock,
 		stats:          newStats(),
 		zlogger:        zlogger,
 	}
@@ -103,6 +106,10 @@ func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 		return fmt.Errorf("stop active boundary: %w", err)
 	}
 
+	if blockNum >= b.stopBlock {
+		return nil
+	}
+
 	for _, boundary := range boundaries {
 		if err := b.Start(boundary.StartBlock()); err != nil {
 			return fmt.Errorf("start skipping boundary: %w", err)
@@ -113,7 +120,7 @@ func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 	}
 
 	if err := b.Start(blockNum); err != nil {
-		return fmt.Errorf("start skipping boundary: %w", err)
+		return fmt.Errorf("start active boundary: %w", err)
 	}
 	return nil
 }
@@ -165,7 +172,11 @@ func (b *Bundler) stop(ctx context.Context) error {
 
 func (b *Bundler) newBoundary(containingBlockNum uint64) *bstream.Range {
 	startBlock := containingBlockNum - (containingBlockNum % b.blockCount)
-	return bstream.NewRangeExcludingEnd(startBlock, startBlock+b.blockCount)
+	endBlock := startBlock + b.blockCount
+	if b.stopBlock < endBlock {
+		endBlock = b.stopBlock
+	}
+	return bstream.NewRangeExcludingEnd(startBlock, endBlock)
 }
 
 func boundariesToSkip(lastBoundary *bstream.Range, blockNum uint64, size uint64) (out []*bstream.Range) {

@@ -25,9 +25,9 @@ var SinkRunCmd = Command(sinkRunE,
 	"Runs substreams sinker to CSV files",
 	ExactArgs(5),
 	Flags(func(flags *pflag.FlagSet) {
+		// FIXME: this adds FinalBlockOnly, etc. which is ignored here
 		sink.AddFlagsToSet(flags)
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
-		flags.Uint64("buffer-size", 1024*1024*1024, "Size of output buffer, in bytes")
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
 		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
 		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
@@ -67,13 +67,14 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		endpoint, manifestPath, outputModuleName, blockRange,
 		zlog,
 		tracer,
+		sink.WithFinalBlocksOnly(), // always set this to true
 	)
 	if err != nil {
 		return fmt.Errorf("unable to setup sinker: %w", err)
 	}
 
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
-	bufferSize := sflags.MustGetUint64(cmd, "buffer-size")
+	bufferSize := uint64(10 * 1024) // too high, this wrecks havoc
 	workingDir := sflags.MustGetString(cmd, "working-dir")
 	chainID := sflags.MustGetString(cmd, "chain-id")
 
@@ -97,7 +98,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, zlog, tracer)
+	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, stopBlock, chainID, zlog, tracer)
 	if err != nil {
 		return fmt.Errorf("unable to setup csv sinker: %w", err)
 	}
@@ -134,6 +135,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	<-entitySink.Terminated()
 	zlog.Info("run terminated gracefully")
 	return nil
 }

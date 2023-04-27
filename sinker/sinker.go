@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/streamingfast/bstream"
@@ -32,6 +33,7 @@ type EntitiesSink struct {
 
 	fileBundlers map[string]*bundler.Bundler
 	poiBundler   *bundler.Bundler
+	stopBlock    uint64
 	chainID      string
 
 	logger *zap.Logger
@@ -47,6 +49,7 @@ func New(
 	entities []string,
 	bundleSize uint64,
 	bufferSize uint64,
+	stopBlock uint64,
 	chainID string,
 	logger *zap.Logger,
 	tracer logging.Tracer) (*EntitiesSink, error) {
@@ -59,6 +62,7 @@ func New(
 		logger:       logger,
 		tracer:       tracer,
 		chainID:      chainID,
+		stopBlock:    stopBlock,
 
 		stats: NewStats(logger),
 	}
@@ -69,14 +73,14 @@ func New(
 	}
 
 	for _, entity := range entities {
-		fb, err := getBundler(entity, s.Sinker.BlockRange().StartBlock(), bundleSize, bufferSize, baseOutputStore, workingDir, logger)
+		fb, err := getBundler(entity, s.Sinker.BlockRange().StartBlock(), stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
 		if err != nil {
 			return nil, err
 		}
 		s.fileBundlers[entity] = fb
 	}
 
-	poiBundler, err := getBundler(schema.PoiEntityName, s.Sinker.BlockRange().StartBlock(), bundleSize, bufferSize, baseOutputStore, workingDir, logger)
+	poiBundler, err := getBundler(schema.PoiEntityName, s.Sinker.BlockRange().StartBlock(), stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +89,7 @@ func New(
 	return s, nil
 }
 
-func getBundler(entity string, startBlock, bundleSize, bufferSize uint64, baseOutputStore dstore.Store, workingDir string, logger *zap.Logger) (*bundler.Bundler, error) {
+func getBundler(entity string, startBlock, stopBlock, bundleSize, bufferSize uint64, baseOutputStore dstore.Store, workingDir string, logger *zap.Logger) (*bundler.Bundler, error) {
 	boundaryWriter := writer.NewBufferedIO(
 		bufferSize,
 		filepath.Join(workingDir, entity),
@@ -97,7 +101,7 @@ func getBundler(entity string, startBlock, bundleSize, bufferSize uint64, baseOu
 		return nil, err
 	}
 
-	fb, err := bundler.New(bundleSize, boundaryWriter, subStore, logger)
+	fb, err := bundler.New(bundleSize, stopBlock, boundaryWriter, subStore, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -111,10 +115,13 @@ func (s *EntitiesSink) Run(ctx context.Context) {
 	s.OnTerminating(func(err error) {
 		s.stats.LogNow()
 		s.logger.Info("csv sinker terminating", zap.Uint64("last_block_written", s.stats.lastBlock))
+		if err == nil {
+			s.handleStopBlockReached(ctx)
+		}
+		s.stats.Close()
 		s.Sinker.Shutdown(err)
 	})
 
-	s.OnTerminating(func(_ error) { s.stats.Close() })
 	s.stats.OnTerminated(func(err error) { s.Shutdown(err) })
 
 	logEach := 15 * time.Second
@@ -131,6 +138,28 @@ func (s *EntitiesSink) Run(ctx context.Context) {
 	s.poiBundler.Launch(uploadContext)
 
 	s.Sinker.Run(ctx, nil, sink.NewSinkerHandlers(s.handleBlockScopedData, s.handleBlockUndoSignal))
+}
+
+func (s *EntitiesSink) handleStopBlockReached(ctx context.Context) error {
+	fmt.Println("rolling bundlers to", s.stopBlock)
+	s.rollAllBundlers(ctx, s.stopBlock)
+	fmt.Println("just rolled bundlers to", s.stopBlock)
+	return nil
+}
+
+func (s *EntitiesSink) rollAllBundlers(ctx context.Context, blockNum uint64) {
+	var wg sync.WaitGroup
+	for _, entityBundler := range s.fileBundlers {
+		wg.Add(1)
+		eb := entityBundler
+		go func() {
+			eb.Roll(ctx, blockNum)
+			wg.Done()
+		}()
+	}
+
+	s.poiBundler.Roll(ctx, blockNum)
+	wg.Wait()
 }
 
 func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstreamsrpc.BlockScopedData, isLive *bool, cursor *sink.Cursor) error {
@@ -161,9 +190,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		}
 	}
 
-	for _, entityBundler := range s.fileBundlers {
-		entityBundler.Roll(ctx, data.Clock.Number)
-	}
+	s.rollAllBundlers(ctx, data.Clock.Number)
 
 	for _, change := range entityChanges.EntityChanges {
 		jsonlChange, err := bundler.JSONLEncode(&pbentity.EntityChangeAtBlockNum{
@@ -182,7 +209,6 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		entityBundler.Writer().Write(jsonlChange)
 	}
 
-	s.poiBundler.Roll(ctx, data.Clock.Number)
 	poiEntity := getPOIEntity(digest.Sum(nil), s.chainID, data.Clock.Number)
 	jsonlPOI, err := bundler.JSONLEncode(poiEntity)
 	if err != nil {
