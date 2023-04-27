@@ -35,6 +35,16 @@ func (e *Entity) Update(newEnt *Entity) {
 	}
 }
 
+func (e *Entity) ValidateFields(desc *schema.EntityDesc) error {
+	for _, field := range desc.OrderedFields() {
+		if !field.Nullable && e.Fields[field.Name] == nil {
+			return fmt.Errorf("field %s cannot be nil on entity %s at ID %s", field.Name, field.Type, e.Fields["id"])
+		}
+	}
+
+	return nil
+}
+
 func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, error) {
 	if in.EntityChange.Operation == pbentity.EntityChange_DELETE {
 		return nil, nil
@@ -108,6 +118,7 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 		}
 		e.Fields[f.Name] = v
 	}
+
 	return e, nil
 }
 
