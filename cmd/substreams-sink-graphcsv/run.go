@@ -93,7 +93,6 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		}
 		entities, err = schema.GetEntityNamesFromSchema(graphqlSchemaFilename)
 		if err != nil {
-			fmt.Println("error is", err)
 			return err
 		}
 	}

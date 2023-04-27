@@ -141,9 +141,7 @@ func (s *EntitiesSink) Run(ctx context.Context) {
 }
 
 func (s *EntitiesSink) handleStopBlockReached(ctx context.Context) error {
-	fmt.Println("rolling bundlers to", s.stopBlock)
 	s.rollAllBundlers(ctx, s.stopBlock)
-	fmt.Println("just rolled bundlers to", s.stopBlock)
 	return nil
 }
 
