@@ -110,6 +110,22 @@ func getBundler(entity string, startBlock, stopBlock, bundleSize, bufferSize uin
 
 }
 
+func (s *EntitiesSink) CloseAllFileBundlers(err error) {
+	var wg sync.WaitGroup
+	for _, fb := range s.fileBundlers {
+		wg.Add(1)
+		f := fb
+		go func() {
+			f.Shutdown(err)
+			<-f.Terminated()
+			wg.Done()
+		}()
+	}
+	s.poiBundler.Shutdown(err)
+	<-s.poiBundler.Terminated()
+	wg.Wait()
+}
+
 func (s *EntitiesSink) Run(ctx context.Context) {
 	s.Sinker.OnTerminating(s.Shutdown)
 	s.OnTerminating(func(err error) {
@@ -118,6 +134,7 @@ func (s *EntitiesSink) Run(ctx context.Context) {
 		if err == nil {
 			s.handleStopBlockReached(ctx)
 		}
+		s.CloseAllFileBundlers(err)
 		s.stats.Close()
 		s.Sinker.Shutdown(err)
 	})

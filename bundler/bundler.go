@@ -3,6 +3,7 @@ package bundler
 import (
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/streamingfast/dhammer"
@@ -59,9 +60,13 @@ func New(
 	return b, nil
 }
 
+func (b *Bundler) name() string {
+	return path.Base(b.outputStore.BaseURL().Path)
+}
+
 func (b *Bundler) Launch(ctx context.Context) {
 	b.OnTerminating(func(err error) {
-		b.zlogger.Info("shutting down bundler", zap.Error(err))
+		b.zlogger.Info("shutting down bundler", zap.String("store", b.name()), zap.Error(err))
 		b.Close()
 	})
 	b.uploadQueue.Start(ctx)
