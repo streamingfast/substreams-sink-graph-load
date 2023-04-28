@@ -44,6 +44,10 @@ func New(
 	schemaFilename string,
 	logger *zap.Logger,
 	tracer logging.Tracer) (*Processor, error) {
+
+	if stopBlock == 0 {
+		return nil, fmt.Errorf("stopBlock must be >0")
+	}
 	p := &Processor{
 		Shutter:    shutter.New(),
 		entities:   make(map[string]*Entity),
@@ -65,7 +69,7 @@ func New(
 
 	p.inputStore = inputStore
 
-	p.csvOutput = NewWriterManager(bundleSize, outputStore)
+	p.csvOutput = NewWriterManager(bundleSize, stopBlock, outputStore)
 
 	entities, err := schema.GetEntitiesFromSchema(schemaFilename)
 	if err != nil {
@@ -102,7 +106,7 @@ func (p *Processor) run(ctx context.Context) error {
 			return fmt.Errorf("fail reading block range in %q: %w", filename, err)
 		}
 
-		if p.stopBlock != 0 && startBlockNum >= p.stopBlock {
+		if startBlockNum >= p.stopBlock {
 			return dstore.StopIteration
 		}
 
@@ -143,16 +147,27 @@ func (p *Processor) run(ctx context.Context) error {
 		}
 
 	}
-	if endRange > p.stopBlock {
-		endRange = p.stopBlock
-	}
+	if endRange >= p.stopBlock-1 {
+		if err := p.flushAllEntities(ctx); err != nil {
+			return err
+		}
 
-	// ensure we create the last file
-	if err := p.csvOutput.Roll(ctx, endRange); err != nil {
-		return err
+		// ensure we create the last file
+		if err := p.csvOutput.Roll(ctx, p.stopBlock); err != nil {
+			return err
+		}
 	}
 	p.csvOutput.current.Close()
 
+	return nil
+}
+
+func (p *Processor) flushAllEntities(ctx context.Context) error {
+	for _, ent := range p.entities {
+		if err := p.csvOutput.Write(ent, p.entityDesc, 0); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

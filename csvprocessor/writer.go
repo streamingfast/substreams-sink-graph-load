@@ -15,13 +15,15 @@ import (
 type WriterManager struct {
 	current      *Writer
 	currentRange *bstream.Range
+	stopBlock    uint64
 	bundleSize   uint64
 	store        dstore.Store
 }
 
-func NewWriterManager(bundleSize uint64, store dstore.Store) *WriterManager {
+func NewWriterManager(bundleSize, stopBlock uint64, store dstore.Store) *WriterManager {
 	return &WriterManager{
 		bundleSize: bundleSize,
+		stopBlock:  stopBlock,
 		store:      store,
 	}
 }
@@ -46,6 +48,10 @@ func (wm *WriterManager) setNewWriter(ctx context.Context, blockNum uint64) erro
 		}
 	}
 
+	if nextRange.Contains(wm.stopBlock) {
+		nextRange = bstream.NewRangeExcludingEnd(nextRange.StartBlock(), wm.stopBlock)
+	}
+
 	writer, err := NewWriter(ctx, wm.store, fileNameFromRange(nextRange))
 	if err != nil {
 		return err
@@ -63,6 +69,9 @@ func (wm *WriterManager) Roll(ctx context.Context, blockNum uint64) error {
 	if wm.currentRange.ReachedEndBlock(blockNum) {
 		if err := wm.current.Close(); err != nil {
 			return err
+		}
+		if blockNum == wm.stopBlock {
+			return nil
 		}
 		return wm.setNewWriter(ctx, blockNum)
 	}
