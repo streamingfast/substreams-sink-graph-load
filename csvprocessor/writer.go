@@ -18,13 +18,15 @@ type WriterManager struct {
 	stopBlock    uint64
 	bundleSize   uint64
 	store        dstore.Store
+	entityDesc   *schema.EntityDesc
 }
 
-func NewWriterManager(bundleSize, stopBlock uint64, store dstore.Store) *WriterManager {
+func NewWriterManager(bundleSize, stopBlock uint64, store dstore.Store, entityDesc *schema.EntityDesc) *WriterManager {
 	return &WriterManager{
 		bundleSize: bundleSize,
 		stopBlock:  stopBlock,
 		store:      store,
+		entityDesc: entityDesc,
 	}
 }
 
@@ -62,6 +64,9 @@ func (wm *WriterManager) setNewWriter(ctx context.Context, blockNum uint64) erro
 
 	writer, err := NewWriter(ctx, wm.store, fileNameFromRange(nextRange))
 	if err != nil {
+		return err
+	}
+	if err := writer.WriteHeader(wm.entityDesc); err != nil {
 		return err
 	}
 
@@ -103,11 +108,10 @@ func (wm *WriterManager) Write(e *Entity, desc *schema.EntityDesc, stopBlock uin
 }
 
 type Writer struct {
-	writer        *io.PipeWriter
-	done          chan struct{}
-	csvWriter     *csv.Writer
-	filename      string
-	headerWritten bool
+	writer    *io.PipeWriter
+	done      chan struct{}
+	csvWriter *csv.Writer
+	filename  string
 }
 
 func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Writer, error) {
@@ -134,7 +138,6 @@ func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Write
 }
 
 func (c *Writer) WriteHeader(desc *schema.EntityDesc) error {
-
 	records := []string{"id", "block_range"}
 	for _, f := range desc.OrderedFields() {
 		if f.Name == "id" {
@@ -143,20 +146,12 @@ func (c *Writer) WriteHeader(desc *schema.EntityDesc) error {
 		records = append(records, f.Name)
 	}
 
+	fmt.Println("writing records", len(records))
 	err := c.csvWriter.Write(records)
-	c.headerWritten = true
 	return err
 }
 
 func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) error {
-	if c == nil {
-		panic("nil")
-	}
-	if !c.headerWritten {
-		if err := c.WriteHeader(desc); err != nil {
-			return err
-		}
-	}
 	records := []string{
 		formatField(e.Fields["id"], schema.FieldTypeID, false, false),
 		blockRange(e.StartBlock, stopBlock),
@@ -276,6 +271,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 }
 
 func (c *Writer) Close() error {
+	c.csvWriter.Flush()
 	if err := c.csvWriter.Error(); err != nil {
 		return fmt.Errorf("error flushing csv encoder: %w", err)
 	}

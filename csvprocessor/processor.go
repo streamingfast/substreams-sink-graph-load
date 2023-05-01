@@ -69,8 +69,6 @@ func New(
 
 	p.inputStore = inputStore
 
-	p.csvOutput = NewWriterManager(bundleSize, stopBlock, outputStore)
-
 	entities, err := schema.GetEntitiesFromSchema(schemaFilename)
 	if err != nil {
 		return nil, err
@@ -85,6 +83,8 @@ func New(
 	if p.entityDesc == nil {
 		return nil, fmt.Errorf("cannot find entity %q in schema %q", entity, schemaFilename)
 	}
+
+	p.csvOutput = NewWriterManager(bundleSize, stopBlock, outputStore, p.entityDesc)
 
 	return p, nil
 }
