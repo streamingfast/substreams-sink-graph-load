@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/drone/envsubst v1.0.3
+	github.com/ettle/strcase v0.1.1
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/jmoiron/sqlx v1.3.5

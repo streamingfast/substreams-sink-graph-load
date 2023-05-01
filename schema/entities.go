@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
-	"strings"
 
 	"github.com/vektah/gqlparser/ast"
 	"github.com/vektah/gqlparser/parser"
@@ -58,15 +57,6 @@ const FieldTypeBigInt FieldType = "BigInt"
 const FieldTypeBigDecimal FieldType = "BigDecimal"
 const FieldTypeBytes FieldType = "Bytes"
 
-//		"ID":         "string",
-//		"String":     "string",
-//		"Int":        "int64",
-//		"Float":      "float64",
-//		"Boolean":    "entity.Bool",
-//		"BigInt":     "entity.Int",
-//		"BigDecimal": "entity.Float",
-//		"Bytes":      "entity.Bytes",
-
 func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
 	graphqlSchemaContent, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -83,7 +73,7 @@ func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
 	for _, def := range graphqlSchemaDoc.Definitions {
 		for _, dir := range def.Directives {
 			if dir.Name == "entity" {
-				entities = append(entities, strings.ToLower(def.Name))
+				entities = append(entities, NormalizeField(def.Name))
 			}
 		}
 	}
@@ -181,7 +171,7 @@ func parseEntity(def *ast.Definition) (*EntityDesc, error) {
 
 	out := &EntityDesc{
 		Fields:    fields,
-		Name:      strings.ToLower(def.Name),
+		Name:      NormalizeField(def.Name),
 		Immutable: immutable,
 	}
 
@@ -190,7 +180,7 @@ func parseEntity(def *ast.Definition) (*EntityDesc, error) {
 
 func ParseFieldDefinition(field *ast.FieldDefinition) (*Field, error) {
 	f := &Field{
-		Name:  field.Name,
+		Name:  NormalizeField(field.Name),
 		Type:  toFieldType(field.Type.Name()),
 		Array: bool(field.Type.Elem != nil),
 	}

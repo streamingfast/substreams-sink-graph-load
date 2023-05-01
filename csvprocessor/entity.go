@@ -57,9 +57,10 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 		"id": in.EntityChange.ID,
 	}
 	for _, f := range in.EntityChange.Fields {
-		fieldDesc, ok := desc.Fields[f.Name]
+		normalizedName := schema.NormalizeField(f.Name)
+		fieldDesc, ok := desc.Fields[normalizedName]
 		if !ok {
-			return nil, fmt.Errorf("invalid field %q not part of entity", f.Name)
+			return nil, fmt.Errorf("invalid field %q not part of entity", normalizedName)
 		}
 
 		var expectedTypedField string
@@ -86,37 +87,37 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 		if fieldDesc.Array {
 			arr, ok := f.NewValue.Typed["Array"]
 			if !ok {
-				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", f.Name, fieldDesc.Type, f.NewValue.Typed)
+				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", normalizedName, fieldDesc.Type, f.NewValue.Typed)
 
 			}
 			asMap, ok := arr.(map[string]interface{})
 			if !ok {
-				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", f.Name, fieldDesc.Type, arr)
+				return nil, fmt.Errorf("invalid field %q: expected array of %s, found %+v", normalizedName, fieldDesc.Type, arr)
 			}
 			val, ok := asMap["value"]
 			if !ok {
-				e.Fields[f.Name] = []interface{}{}
+				e.Fields[normalizedName] = []interface{}{}
 				continue
 			}
 
 			array, ok := val.([]interface{})
 			if !ok {
-				return nil, fmt.Errorf("invalid field %q: expected array for map value, found %+v", f.Name, val)
+				return nil, fmt.Errorf("invalid field %q: expected array for map value, found %+v", normalizedName, val)
 			}
 			out := make([]interface{}, len(array))
 			for i := range array {
 				out[i] = array[i].(map[string]interface{})["Typed"].(map[string]interface{})[expectedTypedField]
 			}
-			e.Fields[f.Name] = out
+			e.Fields[normalizedName] = out
 
 			continue
 		}
 
 		v, ok := f.NewValue.Typed[expectedTypedField]
 		if !ok {
-			return nil, fmt.Errorf("invalid field %q: wrong type %q, got %+v", f.Name, fieldDesc.Type, f.NewValue.Typed)
+			return nil, fmt.Errorf("invalid field %q: wrong type %q, got %+v", normalizedName, fieldDesc.Type, f.NewValue.Typed)
 		}
-		e.Fields[f.Name] = v
+		e.Fields[normalizedName] = v
 	}
 
 	return e, nil

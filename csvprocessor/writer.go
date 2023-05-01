@@ -185,6 +185,14 @@ func toEscapedStringArray(in []interface{}, formatter string) string {
 	return "{" + strings.Join(outs, ",") + "}"
 }
 
+func toInt32Array(in []interface{}, formatter string) string {
+	outs := make([]string, len(in))
+	for i := range in {
+		outs = append(outs, fmt.Sprintf(formatter, in[int32(in[i].(float64))]))
+	}
+	return "{" + strings.Join(outs, ",") + "}"
+}
+
 func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {
 	switch t {
 	case schema.FieldTypeID, schema.FieldTypeString:
@@ -239,20 +247,21 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 			return "0"
 		}
 		if isArray {
-			return toEscapedStringArray(f.([]interface{}), "%d")
+			return toInt32Array(f.([]interface{}), "%d")
 		}
-		return fmt.Sprintf("%d", f)
-	case schema.FieldTypeFloat:
-		if f == nil {
-			if isNullable {
-				return "NULL"
-			}
-			return "0"
-		}
-		if isArray {
-			return toEscapedStringArray(f.([]interface{}), "%f")
-		}
-		return fmt.Sprintf("%f", f)
+		return fmt.Sprintf("%d", int32(f.(float64)))
+	// This is not supported here.
+	//case schema.FieldTypeFloat:
+	//	if f == nil {
+	//		if isNullable {
+	//			return "NULL"
+	//		}
+	//		return "0"
+	//	}
+	//	if isArray {
+	//		return toEscapedStringArray(f.([]interface{}), "%f")
+	//	}
+	//	return fmt.Sprintf("%f", f)
 	case schema.FieldTypeBoolean:
 		if f == nil {
 			if isNullable {

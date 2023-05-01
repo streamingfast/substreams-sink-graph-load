@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -216,7 +215,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 			return err
 		}
 		digest.Write(jsonlChange)
-		entity := strings.ToLower(change.Entity)
+		entity := schema.NormalizeField(change.Entity)
 		entityBundler, ok := s.fileBundlers[entity]
 		if !ok {
 			return fmt.Errorf("cannot get bundler writer for entity %s", entity)
