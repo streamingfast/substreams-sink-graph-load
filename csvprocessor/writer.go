@@ -146,7 +146,6 @@ func (c *Writer) WriteHeader(desc *schema.EntityDesc) error {
 		records = append(records, f.Name)
 	}
 
-	fmt.Println("writing records", len(records))
 	err := c.csvWriter.Write(records)
 	return err
 }
