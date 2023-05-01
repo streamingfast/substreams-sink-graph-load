@@ -17,11 +17,16 @@ func TestFastStableHasher_DoubleChild(t *testing.T) {
 	assert.Equal(t, "261232071512772414229682083989926651266", out.String())
 }
 
-func TestFastStableHasher_SingleStructSingleField(t *testing.T) {
-	assert.Equal(t, "102568403942768160221811810082933398928", FastStableHash(&One[U32]{One: U32(5)}).String())
+func TestFastStableHasher_AddOptionalField(t *testing.T) {
+	one := &One[U32]{One: U32(5)}
+	two := &TwoOptional{One: U32(5), Two: None[U32]()}
+
+	assert.Equal(t, "102568403942768160221811810082933398928", FastStableHash(one).String())
+	assert.Equal(t, "102568403942768160221811810082933398928", FastStableHash(two).String())
+
 }
 
-func TestFastStableHasher_AddOptionalField(t *testing.T) {
+func TestFastStableHasher_TupleAddOptionalField(t *testing.T) {
 	one := &One[U32]{One: U32(5)}
 	two := &TwoOptional{One: U32(5), Two: None[U32]()}
 	tuple := &Tuple2[*One[U32], *TwoOptional]{One: one, Two: two}
@@ -30,6 +35,14 @@ func TestFastStableHasher_AddOptionalField(t *testing.T) {
 }
 
 func TestFastStableHasher_AddDefaultField(t *testing.T) {
+	one := &One[String]{One: String("one")}
+	two := &Two[String]{One: String("one"), Two: String("")}
+
+	assert.Equal(t, "237994494046445339248193596542695086083", FastStableHash(one).String())
+	assert.Equal(t, "237994494046445339248193596542695086083", FastStableHash(two).String())
+}
+
+func TestFastStableHasher_TupleAddDefaultField(t *testing.T) {
 	one := &One[String]{One: String("one")}
 	two := &Two[String]{One: String("one"), Two: String("")}
 	tuple := &Tuple2[*One[String], *Two[String]]{One: one, Two: two}
