@@ -7,14 +7,7 @@ import (
 )
 
 func TestFastStableHasher_DoubleChild(t *testing.T) {
-	hasher := NewFastStableHasher()
-
-	root := Address{}.Root()
-	hasher.Write(root.Child(1), nil)
-	hasher.Write(root.Child(1), nil)
-
-	out := hasher.Finish()
-	assert.Equal(t, "261232071512772414229682083989926651266", out.String())
+	assert.Equal(t, "261232071512772414229682083989926651266", FastStableHash(&DoubleChild{}).String())
 }
 
 func TestFastStableHasher_AddOptionalField(t *testing.T) {
@@ -48,6 +41,14 @@ func TestFastStableHasher_TupleAddDefaultField(t *testing.T) {
 	tuple := &Tuple2[*One[String], *Two[String]]{One: one, Two: two}
 
 	assert.Equal(t, "337538645577122176555714212704832450090", FastStableHash(tuple).String())
+}
+
+type DoubleChild struct {
+}
+
+func (c *DoubleChild) StableHash(addr FieldAddress, hasher StableHasher) {
+	hasher.Write(addr.Child(1), nil)
+	hasher.Write(addr.Child(1), nil)
 }
 
 type One[T StableHashable] struct {
