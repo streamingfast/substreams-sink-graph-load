@@ -28,11 +28,19 @@ func NewWriterManager(bundleSize, stopBlock uint64, store dstore.Store) *WriterM
 	}
 }
 
+func newExclusiveRangeContaining(blockNum uint64, size uint64) (*bstream.Range, error) {
+	if size == 0 {
+		return nil, fmt.Errorf("range needs a size")
+	}
+	start := blockNum - (blockNum % size)
+	return bstream.NewRangeExcludingEnd(start, start+size), nil
+}
+
 func (wm *WriterManager) setNewWriter(ctx context.Context, blockNum uint64) error {
 	var nextRange *bstream.Range
 
 	if wm.currentRange == nil {
-		r, err := bstream.NewRangeContaining(blockNum, wm.bundleSize)
+		r, err := newExclusiveRangeContaining(blockNum, wm.bundleSize)
 		if err != nil {
 			return err
 		}
@@ -62,24 +70,32 @@ func (wm *WriterManager) setNewWriter(ctx context.Context, blockNum uint64) erro
 	return nil
 }
 
-func (wm *WriterManager) Roll(ctx context.Context, blockNum uint64) error {
+func (wm *WriterManager) Roll(ctx context.Context, blockNum uint64) (complete bool, err error) {
 	if wm.current == nil {
-		return wm.setNewWriter(ctx, blockNum)
-	}
-	if wm.currentRange.ReachedEndBlock(blockNum) {
-		if err := wm.current.Close(); err != nil {
-			return err
-		}
 		if blockNum == wm.stopBlock {
-			return nil
+			return false, nil
 		}
-		return wm.setNewWriter(ctx, blockNum)
+		return false, wm.setNewWriter(ctx, blockNum)
 	}
-	return nil
+
+	if blockNum == wm.stopBlock {
+		return true, nil // caller needs to call Close afterwards
+	}
+
+	if !wm.currentRange.Contains(blockNum) {
+		if err := wm.current.Close(); err != nil {
+			return false, err
+		}
+		return false, wm.setNewWriter(ctx, blockNum)
+	}
+	return false, nil
 }
 
 func (wm *WriterManager) Close() error {
-	return wm.current.Close()
+	if wm.current != nil {
+		return wm.current.Close()
+	}
+	return nil
 }
 
 func (wm *WriterManager) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) error {
@@ -87,10 +103,11 @@ func (wm *WriterManager) Write(e *Entity, desc *schema.EntityDesc, stopBlock uin
 }
 
 type Writer struct {
-	writer    *io.PipeWriter
-	done      chan struct{}
-	csvWriter *csv.Writer
-	filename  string
+	writer        *io.PipeWriter
+	done          chan struct{}
+	csvWriter     *csv.Writer
+	filename      string
+	headerWritten bool
 }
 
 func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Writer, error) {
@@ -116,7 +133,30 @@ func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Write
 	return ce, nil
 }
 
+func (c *Writer) WriteHeader(desc *schema.EntityDesc) error {
+
+	records := []string{"id", "block_range"}
+	for _, f := range desc.OrderedFields() {
+		if f.Name == "id" {
+			continue
+		}
+		records = append(records, f.Name)
+	}
+
+	err := c.csvWriter.Write(records)
+	c.headerWritten = true
+	return err
+}
+
 func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) error {
+	if c == nil {
+		panic("nil")
+	}
+	if !c.headerWritten {
+		if err := c.WriteHeader(desc); err != nil {
+			return err
+		}
+	}
 	records := []string{
 		formatField(e.Fields["id"], schema.FieldTypeID, false, false),
 		blockRange(e.StartBlock, stopBlock),
@@ -236,7 +276,6 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 }
 
 func (c *Writer) Close() error {
-	c.csvWriter.Flush()
 	if err := c.csvWriter.Error(); err != nil {
 		return fmt.Errorf("error flushing csv encoder: %w", err)
 	}
@@ -249,5 +288,5 @@ func (c *Writer) Close() error {
 }
 
 func fileNameFromRange(r *bstream.Range) string {
-	return fmt.Sprintf("%d-%d", r.StartBlock(), *r.EndBlock()-1) // endBlock should always be set in those ranges
+	return fmt.Sprintf("%010d-%010d", r.StartBlock(), *r.EndBlock()-1)
 }

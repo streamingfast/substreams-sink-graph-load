@@ -23,6 +23,7 @@ func init() {
 func main() {
 	Run("substreams-sink-graphcsv", "Substreams TheGraph CSV Sink",
 		SinkRunCmd,
+		injectCSVCmd,
 		toCSVCmd,
 
 		ConfigureViper("SINK_GRAPHCSV"),

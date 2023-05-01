@@ -153,11 +153,11 @@ func (p *Processor) run(ctx context.Context) error {
 		}
 
 		// ensure we create the last file
-		if err := p.csvOutput.Roll(ctx, p.stopBlock); err != nil {
+		if _, err := p.csvOutput.Roll(ctx, p.stopBlock); err != nil {
 			return err
 		}
 	}
-	p.csvOutput.current.Close()
+	p.csvOutput.Close()
 
 	return nil
 }
@@ -198,14 +198,15 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 
 		if p.stopBlock != 0 && ch.BlockNum > p.stopBlock {
 			p.logger.Info("passed stopBlock", zap.Uint64("change block_num", ch.BlockNum), zap.Uint64("stop_block", p.stopBlock))
-			if err := p.csvOutput.Close(); err != nil {
-				return err
-			}
 			return nil
 		}
 
-		if err := p.csvOutput.Roll(ctx, ch.BlockNum); err != nil {
+		complete, err := p.csvOutput.Roll(ctx, ch.BlockNum)
+		if err != nil {
 			return err
+		}
+		if complete {
+			break
 		}
 
 		newEnt, err := newEntity(ch, p.entityDesc)

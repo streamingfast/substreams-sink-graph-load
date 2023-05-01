@@ -1,9 +1,10 @@
 package bundler
 
 import (
+	"testing"
+
 	"github.com/streamingfast/bstream"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestBoundary_newBoundary(t *testing.T) {
@@ -11,21 +12,27 @@ func TestBoundary_newBoundary(t *testing.T) {
 		name        string
 		bundlerSize uint64
 		blockNum    uint64
+		stopBlock   uint64
 		expect      *bstream.Range
 	}{
-		{"start of boundary w/ blockCount 10", 10, 0, bstream.NewRangeExcludingEnd(0, 10)},
-		{"middle of boundary w/ blockCount 10", 10, 7, bstream.NewRangeExcludingEnd(0, 10)},
-		{"last block of boundary w/ blockCount 10", 10, 9, bstream.NewRangeExcludingEnd(0, 10)},
-		{"end block of boundary w/ blockCount 10", 10, 10, bstream.NewRangeExcludingEnd(10, 20)},
-		{"start of boundary w/ blockCount 100", 100, 0, bstream.NewRangeExcludingEnd(0, 100)},
-		{"middle of boundary w/ blockCount 100", 100, 73, bstream.NewRangeExcludingEnd(0, 100)},
-		{"last block of boundary w/ blockCount 100", 100, 99, bstream.NewRangeExcludingEnd(0, 100)},
-		{"end block of boundary w/ blockCount 100", 100, 100, bstream.NewRangeExcludingEnd(100, 200)},
+		{"start of boundary w/ blockCount 10", 10, 0, 1000, bstream.NewRangeExcludingEnd(0, 10)},
+		{"middle of boundary w/ blockCount 10", 10, 7, 1000, bstream.NewRangeExcludingEnd(0, 10)},
+		{"last block of boundary w/ blockCount 10", 10, 9, 1000, bstream.NewRangeExcludingEnd(0, 10)},
+		{"end block of boundary w/ blockCount 10", 10, 10, 1000, bstream.NewRangeExcludingEnd(10, 20)},
+		{"start of boundary w/ blockCount 100", 100, 0, 1000, bstream.NewRangeExcludingEnd(0, 100)},
+		{"middle of boundary w/ blockCount 100", 100, 73, 1000, bstream.NewRangeExcludingEnd(0, 100)},
+		{"last block of boundary w/ blockCount 100", 100, 99, 1000, bstream.NewRangeExcludingEnd(0, 100)},
+		{"end block of boundary w/ blockCount 100", 100, 100, 1000, bstream.NewRangeExcludingEnd(100, 200)},
+
+		{"start of boundary w/ stopBlock equal", 10, 0, 10, bstream.NewRangeExcludingEnd(0, 10)},
+		{"start of boundary w/ stopBlock within", 10, 0, 5, bstream.NewRangeExcludingEnd(0, 5)},
+		{"middle of boundary w/ stopBlock within", 10, 14, 15, bstream.NewRangeExcludingEnd(10, 15)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			b := &Bundler{
 				blockCount: test.bundlerSize,
+				stopBlock:  test.stopBlock,
 			}
 			assert.Equal(t, test.expect, b.newBoundary(test.blockNum))
 		})
