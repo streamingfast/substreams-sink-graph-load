@@ -43,3 +43,14 @@ mainnet.eth.streamingfast.io:443 \
 graph_out \
 100000
 ```
+
+Development commands:
+```
+go install -v ./cmd/substreams-sink-graphcsv
+
+time substreams-sink-graphcsv run $(pwd)/out api.streamingfast.io:443 ../substreams-uniswap-v3/substreams.yaml graph_out   12371895   --bundle-size=100 --graphql-schema=../substreams-uniswap-v3/schema.graphql
+
+
+for i in $(ls out); do echo $i; substreams-sink-graphcsv tocsv $(pwd)/out $(pwd)/outcsv $i  12371850    --bundle-size=100 --graphql-schema=../substreams-uniswap-v3/schema.graphql    ; done
+
+```
