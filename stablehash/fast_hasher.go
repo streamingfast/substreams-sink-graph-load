@@ -43,6 +43,11 @@ func NewFastStableHasherFromBytes(bytes []byte) (*FastStableHasher, error) {
 	}, nil
 }
 
+// New implements StableHasher
+func (*FastStableHasher) New() StableHasher {
+	return NewFastStableHasher()
+}
+
 func (h *FastStableHasher) Mixin(other *FastStableHasher) {
 	// Rust version
 	// self.mixer.mixin(&other.mixer);

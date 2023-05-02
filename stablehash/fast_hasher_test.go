@@ -42,6 +42,86 @@ func TestFastStableHasher_TupleAddDefaultField(t *testing.T) {
 	assert.Equal(t, "337538645577122176555714212704832450090", FastStableHash(tuple).String())
 }
 
+func TestFastStableHasher_MapEqual(t *testing.T) {
+	first := MapUnsafe[uint32, string]{
+		1: "one",
+		2: "two",
+		3: "three",
+	}
+
+	second := MapUnsafe[uint32, string]{
+		3: "three",
+		1: "one",
+		2: "two",
+	}
+
+	assert.Equal(t, "60093794751952876589018848897648863192", FastStableHash(first).String())
+	assert.Equal(t, "60093794751952876589018848897648863192", FastStableHash(second).String())
+}
+
+func TestFastStableHasher_MapNotEqualCount(t *testing.T) {
+	first := MapUnsafe[uint32, string]{
+		1: "one",
+		2: "two",
+		3: "three",
+		0: "",
+	}
+
+	second := MapUnsafe[uint32, string]{
+		3: "three",
+		1: "one",
+		2: "two",
+	}
+
+	assert.NotEqual(t, FastStableHash(first).String(), FastStableHash(second).String())
+}
+
+func TestFastStableHasher_MapNotEqualKey(t *testing.T) {
+	first := MapUnsafe[uint32, string]{
+		1: "one",
+		2: "two",
+		3: "three",
+	}
+
+	second := MapUnsafe[uint32, string]{
+		9: "one",
+		2: "two",
+		3: "three",
+	}
+
+	assert.NotEqual(t, FastStableHash(first).String(), FastStableHash(second).String())
+}
+
+func TestFastStableHasher_MapNotEqualValue(t *testing.T) {
+	first := MapUnsafe[uint32, string]{
+		1: "X",
+		2: "two",
+		3: "three",
+	}
+
+	second := MapUnsafe[uint32, string]{
+		1: "one",
+		2: "two",
+		3: "three",
+	}
+
+	assert.NotEqual(t, FastStableHash(first).String(), FastStableHash(second).String())
+}
+
+func TestFastStableHasher_MapNotEqualSwap(t *testing.T) {
+	first := MapUnsafe[uint32, string]{
+		1: "one",
+		2: "two",
+	}
+
+	second := MapUnsafe[uint32, string]{
+		1: "two",
+		2: "one",
+	}
+
+	assert.NotEqual(t, FastStableHash(first).String(), FastStableHash(second).String())
+}
+
 type DoubleChild struct {
 }
 

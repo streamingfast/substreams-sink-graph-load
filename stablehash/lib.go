@@ -14,5 +14,7 @@ type StableHashable interface {
 }
 
 type StableHasher interface {
+	New() StableHasher
 	Write(fieldAddress FieldAddress, bytes []byte)
+	ToBytes() []byte
 }
