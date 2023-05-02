@@ -63,7 +63,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 
 	sink, err := sink.NewFromViper(
 		cmd,
-		"proto:substreams.entity.v1.EntityChanges",
+		sink.IgnoreOutputModuleType,
 		endpoint, manifestPath, outputModuleName, blockRange,
 		zlog,
 		tracer,
@@ -71,6 +71,14 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("unable to setup sinker: %w", err)
+	}
+
+	outputModuleType := sink.OutputModuleTypeUnprefixed()
+	expectedModuleType := "sf.substreams.entity.v1.EntityChanges"
+	expectedModuleLegacyType := "substreams.entity.v1.EntityChanges"
+
+	if outputModuleType != expectedModuleType && outputModuleType != expectedModuleLegacyType {
+		return fmt.Errorf("sink only supports map module with output type %q (or %q) but selected module %q output type is %q", expectedModuleType, expectedModuleLegacyType, outputModuleName, outputModuleType)
 	}
 
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")

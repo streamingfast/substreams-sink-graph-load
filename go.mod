@@ -20,7 +20,7 @@ require (
 	github.com/streamingfast/logging v0.0.0-20221209193439-bff11742bf4c
 	github.com/streamingfast/shutter v1.5.0
 	github.com/streamingfast/substreams v1.0.2-0.20230418195519-fa17a36fd728
-	github.com/streamingfast/substreams-sink v0.1.1-0.20230420161857-72fa2fe5072f
+	github.com/streamingfast/substreams-sink v0.1.1-0.20230502181512-ab5118242ed9
 	github.com/stretchr/testify v1.8.1
 	github.com/vektah/gqlparser v1.3.1
 	github.com/zeebo/xxh3 v1.0.2
