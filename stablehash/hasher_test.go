@@ -16,7 +16,6 @@ func TestFastStableHasher_AddOptionalField(t *testing.T) {
 
 	assert.Equal(t, "102568403942768160221811810082933398928", FastStableHash(one).String())
 	assert.Equal(t, "102568403942768160221811810082933398928", FastStableHash(two).String())
-
 }
 
 func TestFastStableHasher_TupleAddOptionalField(t *testing.T) {

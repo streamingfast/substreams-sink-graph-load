@@ -19,13 +19,18 @@ import (
 )
 
 var toCSVCmd = Command(toCSVE,
-	"tocsv <source-folder> <destination-folder> <entity> <stopBlock>",
-	`Process {source-folder>/{entity} to create CSV files ready for insertion into postgresql to {destination-folder}/{entity}
-		<source-folder> Folder containing one folder per entity with jsonl files, created with 'run' command.
-		<destination-folder> Folder where CSV files will be created (a subfolder named as the entity will be automatically appended)
-		<entity> Name of the entity (ex: 'transfers') that will be processed. You need to run one instance of 'tocsv' per instance.
-		<stopBlock> Where you want to stop creating CSV (usually, very close to chain HEAD)
-	`,
+	"tocsv <source_folder> <destination_folder> <entity> <stop_block>",
+	"Create CSV files ready for insertion into postgresql",
+	Description(`
+		Process <source_folder>/<entity> to create CSV files ready for insertion into PostgreSQL to
+		<destination_folder>/<entity>.
+
+		Arguments:
+		- <source_folder>: Folder containing one folder per entity with jsonl files, created with 'run' command.
+		- <destination_folder>: Folder where CSV files will be created (a subfolder named as the entity will be automatically appended)
+		- <entity>: Name of the entity (ex: 'transfers') that will be processed. You need to run one instance of 'tocsv' per instance.
+		- <stop_block>: Where you want to stop creating CSV (usually, very close to chain HEAD)
+	`),
 	ExactArgs(4),
 	Flags(func(flags *pflag.FlagSet) {
 		sink.AddFlagsToSet(flags)
