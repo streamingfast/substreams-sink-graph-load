@@ -2,7 +2,7 @@ package schema
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
 
 	"github.com/vektah/gqlparser/ast"
@@ -58,7 +58,7 @@ const FieldTypeBigDecimal FieldType = "BigDecimal"
 const FieldTypeBytes FieldType = "Bytes"
 
 func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
-	graphqlSchemaContent, err := ioutil.ReadFile(filename)
+	graphqlSchemaContent, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
@@ -84,7 +84,7 @@ func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
 }
 
 func GetEntitiesFromSchema(filename string) (entities []*EntityDesc, err error) {
-	graphqlSchemaContent, err := ioutil.ReadFile(filename)
+	graphqlSchemaContent, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
