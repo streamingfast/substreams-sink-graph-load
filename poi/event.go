@@ -18,7 +18,7 @@ func NewProofOfIndexingSetEntity(entity *pbentity.EntityChange) ProofOfIndexingS
 	event := ProofOfIndexingSetEntity{
 		EntityType: entity.Entity,
 		EntityID:   entity.Id,
-		Data:       stablehash.Map[string, *pbentity.Value]{},
+		Data:       make(stablehash.Map[string, *pbentity.Value], len(entity.Fields)),
 	}
 
 	for _, field := range entity.Fields {

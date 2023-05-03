@@ -35,7 +35,8 @@ func (v *Value) toStableHashable() (stablehash.Hashable, byte) {
 		return stablehash.I32(v.Int32), 0x2
 
 	case *Value_Bigdecimal:
-		return nil, 0x3
+		// FIXME: Wrong for now but prevents a panic if someone wants to run the tool
+		return stablehash.U8(0), 0x3
 
 	case *Value_Bool:
 		return stablehash.Bool(v.Bool), 0x4
