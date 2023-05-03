@@ -270,3 +270,18 @@ func (m MapUnsafe[K, V]) StableHash(addr FieldAddress, hasher Hasher) {
 		hasher.Write(b, newHasher.ToBytes())
 	}
 }
+
+func (b BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
+	// let (int, exp) = self.as_bigint_and_exponent();
+	// StableHash::stable_hash(&exp, field_address.child(1), state);
+	I64(b.Scale).StableHash(addr.Child(1), hasher)
+
+	// Normally it would be a red flag to pass field_address in after having used a child slot.
+	// But, we know the implementation of StableHash for BigInt will not use child(1) and that
+	// it will not in the future due to having no forward schema evolutions for ints and the
+	// stability guarantee.
+	//
+	// For reference, ints use child(0) for the sign and write the little endian bytes to the parent slot.
+	// BigInt(int).stable_hash(field_address, state);
+	(*BigInt)(b.Int).StableHash(addr, hasher)
+}

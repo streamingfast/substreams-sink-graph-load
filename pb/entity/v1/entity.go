@@ -35,8 +35,12 @@ func (v *Value) toStableHashable() (stablehash.Hashable, byte) {
 		return stablehash.I32(v.Int32), 0x2
 
 	case *Value_Bigdecimal:
-		// FIXME: Wrong for now but prevents a panic if someone wants to run the tool
-		return stablehash.U8(0), 0x3
+		bigDecimal, err := stablehash.NewBigDecimalFromString(v.Bigdecimal)
+		if err != nil {
+			panic(fmt.Errorf("received Value_Bigdecimal value %q, should have been parsable: %w", v.Bigdecimal, err))
+		}
+
+		return bigDecimal, 0x3
 
 	case *Value_Bool:
 		return stablehash.Bool(v.Bool), 0x4
@@ -47,7 +51,7 @@ func (v *Value) toStableHashable() (stablehash.Hashable, byte) {
 	case *Value_Bytes:
 		data, err := base64.StdEncoding.DecodeString(v.Bytes)
 		if err != nil {
-			panic(fmt.Errorf("received Value_Bytes %q, should have been base64 decodable (standard padded)", v.Bytes))
+			panic(fmt.Errorf("received invalid Value_Bytes value %q, should have been base64 decodable (standard padded): %w", v.Bytes, err))
 		}
 
 		return stablehash.Bytes(data), 0x6

@@ -97,61 +97,80 @@ func (b *BigDecimal) normalizeInPlace() {
 
 	// let (bigint, exp) = big_decimal.as_bigint_and_exponent();
 	bigint, exp := b.Int, b.Scale
+	zlog.Debug(fmt.Sprintf("normalized: as_bigint_and_exponent (bigint %s, exp %d)", bigint, exp))
 
 	// let (sign, mut digits) = bigint.to_radix_be(10);
 	sign, digits := bigint.Sign(), bigint.Abs(bigint).String()
+	trace("normalized: to_radix_be (sign %s, digits (str) %s)", Sign(sign), digits)
 
 	// let trailing_count = digits.iter().rev().take_while(|i| **i == 0).count();
 	// digits.truncate(digits.len() - trailing_count);
 	digits, trailingCount := trailingZeroTruncated(digits)
+	trace("normalized: trailing_count %d", trailingCount)
+	trace("normalized: digits truncated %s", digits)
+
 	// let int_val = num_bigint::BigInt::from_radix_be(sign, &digits, 10).unwrap();
 	b.Int, _ = (&big.Int{}).SetString(digits, 10)
 	if sign == -1 {
 		b.Int = b.Int.Neg(b.Int)
 	}
+	trace("normalized: int_val %s", b.Int)
 
 	// let scale = exp - trailing_count as i64;
 	b.Scale = exp - trailingCount
+	trace("normalized: scale %d", b.Scale)
 	// BigDecimal(bigdecimal::BigDecimal::new(int_val, scale))
 }
 
 func trailingZeroTruncated(in string) (string, int64) {
-	out := strings.TrimSuffix(in, "0")
+	out := strings.TrimRight(in, "0")
 	return out, int64(len(in) - len(out))
 }
 
 func (b *BigDecimal) withPrecisionInPlace(prec uint64) {
 	digits := b.digits()
+	trace("with_prec: digits %d", digits)
 
 	if digits > prec {
+		trace("with_prec: digits > prec")
+
 		diff := digits - prec
 		p := ten_to_the(diff)
 
 		var q *big.Int
 		// let (mut q, r) = self.int_val.div_rem(&p);
-		q, r := (&big.Int{}).DivMod(b.Int, p, &big.Int{})
+		q, r := (&big.Int{}).QuoRem(b.Int, p, &big.Int{})
+		trace("with_prec: digits > prec (q %s, r %s)", q, r)
 
 		// check for "leading zero" in remainder term; otherwise round
 		tenTimesR := (&big.Int{}).Mul(bigTen, r)
 		if p.Cmp(tenTimesR) == -1 {
-			q = q.Add(q, get_rounding_term(r))
+			roundingTerm := get_rounding_term(r)
+			q = q.Add(q, roundingTerm)
+			trace("with_prec: digits > prec adding rounding term %s", roundingTerm)
 		}
 
 		b.Int = q
 		b.Scale = b.Scale - int64(diff)
+		trace("with_prec: digits > prec got (bigint %s, exp %d)", b.Int, b.Scale)
+
 		return
 	}
 
 	if digits < prec {
+		trace("with_prec: digits < prec")
+
 		diff := prec - digits
 		p := ten_to_the(diff)
 
 		b.Int = (p).Mul(b.Int, p)
 		b.Scale = b.Scale + int64(diff)
+		trace("with_prec: digits < prec got (bigint %s, exp %d)", b.Int, b.Scale)
+
 		return
 	}
 
-	return
+	trace("with_prec: digits == prec")
 }
 
 // Digits gives number of digits in the non-scaled integer representation
@@ -163,11 +182,15 @@ func (b *BigDecimal) digits() uint64 {
 
 	// guess number of digits based on number of bits in UInt
 	// let mut digits = (int.bits() as f64 / 3.3219280949) as u64;
-	bits := uint(bInt.BitLen()) - bInt.TrailingZeroBits()
+	bits := uint(bInt.BitLen())
+	trace("digits: bits %d", bits)
+
 	digits := uint64(float64(bits) / 3.3219280949)
+	trace("digits: guess digits %d", digits)
 
 	// let mut num = ten_to_the(digits);
 	num := ten_to_the(digits)
+	trace("digits: num %s", num)
 
 	// while int >= &num {
 	// 	num *= 10u8;
@@ -176,8 +199,10 @@ func (b *BigDecimal) digits() uint64 {
 	for bInt.Cmp(num) >= 0 {
 		num = num.Mul(num, bigTen)
 		digits += 1
+		trace("digits: add one digit")
 	}
 
+	trace("digits: final digits %d", digits)
 	return digits
 }
 
@@ -234,4 +259,33 @@ func get_rounding_term(num *big.Int) *big.Int {
 	// let s = format!("{}", num);
 	// let high_digit = u8::from_str(&s[0..1]).unwrap();
 	// if high_digit < 5 { 0 } else { 1 }
+}
+
+type Sign int
+
+func (s Sign) String() string {
+	if s <= -1 {
+		return "SignMinus"
+	}
+
+	if s >= 1 {
+		return "SignPlus"
+	}
+
+	return "NoSign"
+}
+
+// DEBUG_BIGDECIMAL the logging tracer is so heaviy if activated by default that it's worth
+// putting all the tracing support behind a manually activated flag.
+//
+// **Important** Don't forget to set it back to false once you have debugged enough
+const DEBUG_BIGDECIMAL = false
+
+// trace traces the following print statement through `zlog` logger if [DEBUG_BIGDECIMAL]
+// in-code static variable is set to `true` (needs to be manually changed and program re-compiled
+// to have an effect) and if `tracer` is enabled.
+func trace(msg string, args ...any) {
+	if DEBUG_BIGDECIMAL && tracer.Enabled() {
+		zlog.Debug(fmt.Sprintf(msg, args...))
+	}
 }
