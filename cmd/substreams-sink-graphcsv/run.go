@@ -20,6 +20,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	SUPPORTED_MODULE_TYPE = "sf.substreams.entity.v1.EntityChanges"
+	LEGACY_MODULE_TYPE    = "substreams.entity.v1.EntityChanges"
+)
+
 var SinkRunCmd = Command(sinkRunE,
 	"run (--entities|--graphql-schema) <destination-folder> <endpoint> <manifest> <module> <stopBlock>",
 	"Runs substreams sinker to CSV files",
@@ -74,11 +79,9 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	outputModuleType := sink.OutputModuleTypeUnprefixed()
-	expectedModuleType := "sf.substreams.entity.v1.EntityChanges"
-	expectedModuleLegacyType := "substreams.entity.v1.EntityChanges"
 
-	if outputModuleType != expectedModuleType && outputModuleType != expectedModuleLegacyType {
-		return fmt.Errorf("sink only supports map module with output type %q (or %q) but selected module %q output type is %q", expectedModuleType, expectedModuleLegacyType, outputModuleName, outputModuleType)
+	if outputModuleType != SUPPORTED_MODULE_TYPE && outputModuleType != LEGACY_MODULE_TYPE {
+		return fmt.Errorf("sink only supports map module with output type %q (or %q) but selected module %q output type is %q", SUPPORTED_MODULE_TYPE, LEGACY_MODULE_TYPE, outputModuleName, outputModuleType)
 	}
 
 	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")

@@ -2,7 +2,6 @@ package sinker
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamingfast/bstream"
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
@@ -18,9 +16,9 @@ import (
 	"github.com/streamingfast/substreams-sink-graphcsv/bundler"
 	"github.com/streamingfast/substreams-sink-graphcsv/bundler/writer"
 	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
+	"github.com/streamingfast/substreams-sink-graphcsv/poi"
 	"github.com/streamingfast/substreams-sink-graphcsv/schema"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
-	pbsubstreams "github.com/streamingfast/substreams/pb/sf/substreams/v1"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -34,6 +32,7 @@ type EntitiesSink struct {
 	poiBundler   *bundler.Bundler
 	stopBlock    uint64
 	chainID      string
+	lastPOI      []byte
 
 	logger *zap.Logger
 	tracer logging.Tracer
@@ -183,15 +182,8 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		return fmt.Errorf("received data from wrong output module, expected to received from %q but got module's output for %q", s.OutputModuleName(), output.Name)
 	}
 
-	digest := sha256.New()
-	blockHash, err := hex.DecodeString(data.Clock.Id)
-	if err != nil {
-		return fmt.Errorf("invalid clock received: %w", err)
-	}
-	digest.Write(blockHash)
-
 	entityChanges := &pbentity.EntityChanges{}
-	err = proto.Unmarshal(output.GetMapOutput().GetValue(), entityChanges)
+	err := proto.Unmarshal(output.GetMapOutput().GetValue(), entityChanges)
 	if err != nil {
 		return fmt.Errorf("unmarshal entity changes: %w", err)
 	}
@@ -206,6 +198,10 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 
 	s.rollAllBundlers(ctx, data.Clock.Number)
 
+	proofOfIndexing := poi.NewProofOfIndexing(data.Clock.Number, poi.VersionFast)
+
+	fmt.Printf("POI before process block %d is %s\n", data.Clock.Number, proofOfIndexing.DebugCurrent())
+
 	for _, change := range entityChanges.EntityChanges {
 		jsonlChange, err := bundler.JSONLEncode(&pbentity.EntityChangeAtBlockNum{
 			EntityChange: change,
@@ -214,37 +210,70 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		if err != nil {
 			return err
 		}
-		digest.Write(jsonlChange)
+
 		entity := schema.NormalizeField(change.Entity)
 		entityBundler, ok := s.fileBundlers[entity]
 		if !ok {
 			return fmt.Errorf("cannot get bundler writer for entity %s", entity)
 		}
 		entityBundler.Writer().Write(jsonlChange)
+
+		if err := addEntityChangeToPOI(proofOfIndexing, change); err != nil {
+			return fmt.Errorf("entity change POI: %w", err)
+		}
+
+		fmt.Printf(
+			"POI after entity change (%s @ %s) in block %d is %s (fields %v)\n",
+			change.Entity, change.Id, data.Clock.Number, proofOfIndexing.DebugCurrent(),
+			change.Fields,
+		)
 	}
 
-	poiEntity := getPOIEntity(digest.Sum(nil), s.chainID, data.Clock.Number)
+	fmt.Printf(
+		"Pausing for block %d previous is %s\n",
+		data.Clock.Number, hex.EncodeToString(s.lastPOI),
+	)
+
+	poi, err := proofOfIndexing.Pause(s.lastPOI)
+	if err != nil {
+		return fmt.Errorf("pause proof of indexing: %w", err)
+	}
+
+	fmt.Printf(
+		"Final digest after pause for block %d is %s\n",
+		data.Clock.Number, hex.EncodeToString(poi),
+	)
+
+	poiEntity := getPOIEntity(poi, s.chainID, data.Clock.Number)
 	jsonlPOI, err := bundler.JSONLEncode(poiEntity)
 	if err != nil {
 		return err
 	}
 	s.poiBundler.Writer().Write(jsonlPOI)
 
+	s.lastPOI = poi
 	s.stats.RecordBlock(cursor.Block().Num())
 
 	return nil
 }
 
+func addEntityChangeToPOI(proofOfIndexing *poi.ProofOfIndexing, change *pbentity.EntityChange) error {
+	switch change.Operation {
+	case pbentity.EntityChange_CREATE, pbentity.EntityChange_UPDATE, pbentity.EntityChange_FINAL:
+		proofOfIndexing.SetEntity(change)
+
+	case pbentity.EntityChange_DELETE:
+		proofOfIndexing.RemoveEntity(change)
+
+	case pbentity.EntityChange_UNSET:
+		return fmt.Errorf("received %q operation which is should never be sent", change.Operation)
+	}
+
+	return nil
+}
+
 func (s *EntitiesSink) handleBlockUndoSignal(ctx context.Context, data *pbsubstreamsrpc.BlockUndoSignal, cursor *sink.Cursor) error {
-	return fmt.Errorf("received undo signal: should not happen, substreams connection should be 'final-blocks-only' ")
-}
-
-func dataAsBlockRef(blockData *pbsubstreamsrpc.BlockScopedData) bstream.BlockRef {
-	return clockAsBlockRef(blockData.Clock)
-}
-
-func clockAsBlockRef(clock *pbsubstreams.Clock) bstream.BlockRef {
-	return bstream.NewBlockRef(clock.Id, clock.Number)
+	return fmt.Errorf("received undo signal: should not happen, substreams connection should be 'final-blocks-only'")
 }
 
 func getPOIEntity(digest []byte, chainID string, blockNum uint64) *pbentity.EntityChangeAtBlockNum {

@@ -7,6 +7,8 @@ type FieldAddress interface {
 	Root() FieldAddress
 	Child(number uint64) FieldAddress
 	Unordered() (FieldAddress, FieldAddress)
+
+	String() string
 }
 
 var _ FieldAddress = Address{}
@@ -30,6 +32,10 @@ type Address num.U128
 //     }
 // }
 
+func AddressRoot() FieldAddress {
+	return Address(num.U128From64(17))
+}
+
 // Child implements FieldAddress
 func (a Address) Child(number uint64) FieldAddress {
 	value := (num.U128)(a)
@@ -39,7 +45,7 @@ func (a Address) Child(number uint64) FieldAddress {
 
 // Root implements FieldAddress
 func (Address) Root() FieldAddress {
-	return Address(num.U128From64(17))
+	return AddressRoot()
 }
 
 // Unordered implements FieldAddress
@@ -54,4 +60,8 @@ func (a Address) AsUint64() uint64 {
 func (a Address) LowHigh() (low, high uint64) {
 	high, low = (num.U128)(a).Raw()
 	return
+}
+
+func (a Address) String() string {
+	return (num.U128)(a).String()
 }

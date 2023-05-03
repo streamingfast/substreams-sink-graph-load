@@ -2,19 +2,20 @@ package stablehash
 
 import "github.com/shabbyrobe/go-num"
 
-func FastStableHash(value StableHashable) num.U128 {
-	hasher := NewFastStableHasher()
+func FastHash(value Hashable) num.U128 {
+	hasher := NewFastHasher()
 	value.StableHash(Address{}.Root(), hasher)
 
 	return hasher.Finish()
 }
 
-type StableHashable interface {
-	StableHash(FieldAddress, StableHasher)
+type Hashable interface {
+	StableHash(FieldAddress, Hasher)
 }
 
-type StableHasher interface {
-	New() StableHasher
+type Hasher interface {
+	New() Hasher
 	Write(fieldAddress FieldAddress, bytes []byte)
+	Mixin(other Hasher)
 	ToBytes() []byte
 }

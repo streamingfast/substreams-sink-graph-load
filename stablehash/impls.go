@@ -1,11 +1,15 @@
 package stablehash
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+	"math/big"
+)
 
 // HashReflect perform stable hashing of value using reflecting to determine the type.
 // A `true` value is returned if hash was performed correctly, `false` if type is unhandled.
-func HashReflect(in any, addr FieldAddress, hasher StableHasher) (ok bool) {
-	converted := toStableHashable(in)
+func HashReflect(in any, addr FieldAddress, hasher Hasher) (ok bool) {
+	converted := ToHashable(in)
 	if converted == nil {
 		return false
 	}
@@ -14,8 +18,18 @@ func HashReflect(in any, addr FieldAddress, hasher StableHasher) (ok bool) {
 	return true
 }
 
-func toStableHashable(in any) StableHashable {
+func ToHashable(in any) Hashable {
 	switch v := in.(type) {
+	case bool:
+		return Bool(v)
+	case int8:
+		return I8(v)
+	case int16:
+		return I16(v)
+	case int32:
+		return I32(v)
+	case int64:
+		return I64(v)
 	case uint8:
 		return U8(v)
 	case uint16:
@@ -28,7 +42,9 @@ func toStableHashable(in any) StableHashable {
 		return String(v)
 	case []byte:
 		return Bytes(v)
-	case StableHashable:
+	case *big.Int:
+		return (*BigInt)(v)
+	case Hashable:
 		return v
 	default:
 		return nil
@@ -36,7 +52,7 @@ func toStableHashable(in any) StableHashable {
 }
 
 // MustHashReflect is like [HashReflect] but infaillible.
-func MustHashReflect(in any, addr FieldAddress, hasher StableHasher) {
+func MustHashReflect(in any, addr FieldAddress, hasher Hasher) {
 	ok := HashReflect(in, addr, hasher)
 	if !ok {
 		panic(fmt.Errorf("don't know how to hash value of type %T", in))
@@ -45,27 +61,27 @@ func MustHashReflect(in any, addr FieldAddress, hasher StableHasher) {
 
 type String string
 
-func (b String) StableHash(addr FieldAddress, hasher StableHasher) {
+func (b String) StableHash(addr FieldAddress, hasher Hasher) {
 	Bytes(b).StableHash(addr, hasher)
 }
 
 type Bytes []byte
 
-func (b Bytes) StableHash(addr FieldAddress, hasher StableHasher) {
+func (b Bytes) StableHash(addr FieldAddress, hasher Hasher) {
 	if len(b) != 0 {
 		hasher.Write(addr, b)
 	}
 }
 
-func Some[T StableHashable](in T) Optional[T] {
+func Some[T Hashable](in T) Optional[T] {
 	return Optional[T]{t: &in}
 }
 
-func None[T StableHashable]() Optional[T] {
+func None[T Hashable]() Optional[T] {
 	return Optional[T]{t: nil}
 }
 
-type Optional[T StableHashable] struct {
+type Optional[T Hashable] struct {
 	t *T
 }
 
@@ -77,38 +93,98 @@ func (u *Optional[T]) IsNone() bool {
 	return u == nil || u.t == nil
 }
 
-func (u *Optional[T]) StableHash(addr FieldAddress, hasher StableHasher) {
+func (u *Optional[T]) StableHash(addr FieldAddress, hasher Hasher) {
 	if u.IsSome() {
 		(*u.t).StableHash(addr.Child(0), hasher)
 		hasher.Write(addr, nil)
 	}
 }
 
+type Bool bool
+
+var (
+	boolBytesFalse = []byte{0x0}
+	boolBytesTrue  = []byte{0x1}
+)
+
+func (i Bool) StableHash(addr FieldAddress, hasher Hasher) {
+	bytes := boolBytesFalse
+	if i {
+		bytes = boolBytesTrue
+	}
+
+	hasher.Write(addr, bytes)
+}
+
+type I8 int8
+
+func (i I8) StableHash(addr FieldAddress, hasher Hasher) {
+	stableHashInt(i < 0, []byte{byte(math.Abs(float64(i)))}, addr, hasher)
+}
+
+type I16 int16
+
+func (i I16) StableHash(addr FieldAddress, hasher Hasher) {
+	stableHashInt(i < 0, le.AppendUint16(make([]byte, 0, 2), uint16(math.Abs(float64(i)))), addr, hasher)
+}
+
+type I32 int32
+
+func (i I32) StableHash(addr FieldAddress, hasher Hasher) {
+	stableHashInt(i < 0, le.AppendUint32(make([]byte, 0, 4), uint32(math.Abs(float64(i)))), addr, hasher)
+}
+
+type I64 int64
+
+func (i I64) StableHash(addr FieldAddress, hasher Hasher) {
+	stableHashInt(i < 0, le.AppendUint64(make([]byte, 0, 8), uint64(math.Abs(float64(i)))), addr, hasher)
+}
+
 type U8 uint8
 
-func (u U8) StableHash(addr FieldAddress, hasher StableHasher) {
+func (u U8) StableHash(addr FieldAddress, hasher Hasher) {
 	stableHashInt(false, []byte{byte(u)}, addr, hasher)
 }
 
 type U16 uint16
 
-func (u U16) StableHash(addr FieldAddress, hasher StableHasher) {
+func (u U16) StableHash(addr FieldAddress, hasher Hasher) {
 	stableHashInt(false, le.AppendUint16(make([]byte, 0, 2), uint16(u)), addr, hasher)
 }
 
 type U32 uint32
 
-func (u U32) StableHash(addr FieldAddress, hasher StableHasher) {
+func (u U32) StableHash(addr FieldAddress, hasher Hasher) {
 	stableHashInt(false, le.AppendUint32(make([]byte, 0, 4), uint32(u)), addr, hasher)
 }
 
 type U64 uint64
 
-func (u U64) StableHash(addr FieldAddress, hasher StableHasher) {
+func (u U64) StableHash(addr FieldAddress, hasher Hasher) {
 	stableHashInt(false, le.AppendUint64(make([]byte, 0, 8), uint64(u)), addr, hasher)
 }
 
-func stableHashInt(negative bool, leBytes []byte, addr FieldAddress, hasher StableHasher) {
+type BigInt big.Int
+
+func (i *BigInt) StableHash(addr FieldAddress, hasher Hasher) {
+	value := (*big.Int)(i)
+
+	negative := value.Sign() == -1
+	bytes := reverseBytesInPlace(value.Bytes())
+
+	stableHashInt(negative, bytes, addr, hasher)
+}
+
+func reverseBytesInPlace(bytes []byte) []byte {
+	byteCount := len(bytes)
+	for i := 0; i < byteCount/2; i++ {
+		bytes[i], bytes[byteCount-i-1] = bytes[byteCount-i-1], bytes[i]
+	}
+
+	return bytes
+}
+
+func stableHashInt(negative bool, leBytes []byte, addr FieldAddress, hasher Hasher) {
 	// Rust version
 	// // Having the negative sign be a child makes it possible to change the schema
 	// // from u32 to i64 in a backward compatible way.
@@ -126,6 +202,7 @@ func stableHashInt(negative bool, leBytes []byte, addr FieldAddress, hasher Stab
 	}
 
 	canonical := trim_zeros(leBytes)
+
 	if len(canonical) > 0 {
 		hasher.Write(addr, canonical)
 	}
@@ -142,7 +219,7 @@ func trim_zeros(bytes []byte) (out []byte) {
 	// 	end -= 1;
 	// }
 	// &bytes[0..end]
-	end := len(bytes) - 1
+	end := len(bytes)
 	for end != 0 && bytes[end-1] == 0 {
 		end -= 1
 	}
@@ -150,9 +227,9 @@ func trim_zeros(bytes []byte) (out []byte) {
 	return bytes[0:end]
 }
 
-type Map[K comparable, V StableHashable] map[K]V
+type Map[K comparable, V Hashable] map[K]V
 
-func (m Map[K, V]) StableHash(addr FieldAddress, hasher StableHasher) {
+func (m Map[K, V]) StableHash(addr FieldAddress, hasher Hasher) {
 	// Rust version
 	// for member in items { # Note member here is a tuple (k, v)
 	for k, v := range m {
@@ -182,7 +259,7 @@ func (m Map[K, V]) StableHash(addr FieldAddress, hasher StableHasher) {
 // Panics if either K or K is not stable hashable.
 type MapUnsafe[K comparable, V any] map[K]V
 
-func (m MapUnsafe[K, V]) StableHash(addr FieldAddress, hasher StableHasher) {
+func (m MapUnsafe[K, V]) StableHash(addr FieldAddress, hasher Hasher) {
 	for k, v := range m {
 		newHasher := hasher.New()
 		a, b := addr.Unordered()

@@ -7,21 +7,21 @@ import (
 	"github.com/zeebo/xxh3"
 )
 
-var _ StableHasher = (*FastStableHasher)(nil)
+var _ Hasher = (*FastHasher)(nil)
 
-type FastStableHasher struct {
+type FastHasher struct {
 	mixer FldMix
 	count uint64
 }
 
-func NewFastStableHasher() *FastStableHasher {
-	return &FastStableHasher{
+func NewFastHasher() *FastHasher {
+	return &FastHasher{
 		mixer: NewFldMix(),
 		count: 0,
 	}
 }
 
-func NewFastStableHasherFromBytes(bytes []byte) (*FastStableHasher, error) {
+func NewFastHasherFromBytes(bytes []byte) (*FastHasher, error) {
 	if len(bytes) != 32 {
 		return nil, fmt.Errorf("accepting exactly 32 bytes, got %d", len(bytes))
 	}
@@ -37,18 +37,23 @@ func NewFastStableHasherFromBytes(bytes []byte) (*FastStableHasher, error) {
 		return nil, fmt.Errorf("invalid mixed bytes: %w", err)
 	}
 
-	return &FastStableHasher{
+	return &FastHasher{
 		mixer: mixer,
 		count: le.Uint64(bytes[24:32]),
 	}, nil
 }
 
 // New implements StableHasher
-func (*FastStableHasher) New() StableHasher {
-	return NewFastStableHasher()
+func (*FastHasher) New() Hasher {
+	return NewFastHasher()
 }
 
-func (h *FastStableHasher) Mixin(other *FastStableHasher) {
+func (h *FastHasher) Mixin(in Hasher) {
+	other, ok := in.(*FastHasher)
+	if !ok {
+		panic(fmt.Errorf("can only mixin hasher of same type, accepting %T but got %T", h, other))
+	}
+
 	// Rust version
 	// self.mixer.mixin(&other.mixer);
 	// self.count = self.count.wrapping_add(other.count);
@@ -57,7 +62,7 @@ func (h *FastStableHasher) Mixin(other *FastStableHasher) {
 	h.count += other.count
 }
 
-func (h *FastStableHasher) ToBytes() (out []byte) {
+func (h *FastHasher) ToBytes() (out []byte) {
 	// Rust version
 	// let mixer = self.mixer.to_bytes();
 	// let count = self.count.to_le_bytes();
@@ -73,7 +78,7 @@ func (h *FastStableHasher) ToBytes() (out []byte) {
 	return
 }
 
-func (h *FastStableHasher) Write(fieldAddress FieldAddress, bytes []byte) {
+func (h *FastHasher) Write(fieldAddress FieldAddress, bytes []byte) {
 	address, ok := fieldAddress.(Address)
 	if !ok {
 		panic(fmt.Errorf("this hasher only accepts FieldAddress of type Address, got %T", fieldAddress))
@@ -89,7 +94,7 @@ func (h *FastStableHasher) Write(fieldAddress FieldAddress, bytes []byte) {
 	h.count += 1
 }
 
-func (h *FastStableHasher) Finish() num.U128 {
+func (h *FastHasher) Finish() num.U128 {
 	// Rust version
 	// 	xxhash_rust::xxh3::xxh3_128_with_seed(&self.mixer.to_bytes(), self.count)
 	return hash128Seed(h.mixer.ToBytes(), h.count)
