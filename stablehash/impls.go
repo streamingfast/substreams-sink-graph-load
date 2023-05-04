@@ -271,9 +271,10 @@ func (m MapUnsafe[K, V]) StableHash(addr FieldAddress, hasher Hasher) {
 	}
 }
 
+// StableHash for BigDecimal, ported from `graph-node`.
+//
+// See https://github.com/graphprotocol/graph-node/blob/9d013f75f2a565e3d126737593e3a30d1b2f212e/graph/src/data/store/scalar.rs#L215
 func (b BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
-	// let (int, exp) = self.as_bigint_and_exponent();
-	// StableHash::stable_hash(&exp, field_address.child(1), state);
 	I64(b.Scale).StableHash(addr.Child(1), hasher)
 
 	// Normally it would be a red flag to pass field_address in after having used a child slot.
@@ -282,6 +283,5 @@ func (b BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
 	// stability guarantee.
 	//
 	// For reference, ints use child(0) for the sign and write the little endian bytes to the parent slot.
-	// BigInt(int).stable_hash(field_address, state);
 	(*BigInt)(b.Int).StableHash(addr, hasher)
 }
