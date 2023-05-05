@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
+	"net/url"
 	"regexp"
 	"strconv"
 
@@ -57,12 +57,22 @@ func New(
 		tracer:     tracer,
 	}
 
-	inputStore, err := dstore.NewJSONLStore(filepath.Join(srcFolder, entity))
+	srcURL, err := url.Parse(srcFolder)
+	if err != nil {
+		return nil, err
+	}
+	tweakedSrcURL := srcURL.JoinPath(entity)
+	inputStore, err := dstore.NewJSONLStore(tweakedSrcURL.String())
 	if err != nil {
 		return nil, err
 	}
 
-	outputStore, err := dstore.NewStore(filepath.Join(destFolder, entity), "csv", "none", false)
+	destURL, err := url.Parse(destFolder)
+	if err != nil {
+		return nil, err
+	}
+	tweakedDestURL := destURL.JoinPath(entity)
+	outputStore, err := dstore.NewStore(tweakedDestURL.String(), "csv", "none", false)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +109,7 @@ func (p *Processor) run(ctx context.Context) error {
 	var endRange uint64
 	p.logger.Info("retrieving relevant entity files")
 	fileCount := 0
+	fmt.Println("inputstore is", p.inputStore.BaseURL())
 	err := p.inputStore.Walk(context.Background(), "", func(filename string) (err error) {
 		fileCount++
 		startBlockNum, endBlockNum, err := getBlockRange(filename)
