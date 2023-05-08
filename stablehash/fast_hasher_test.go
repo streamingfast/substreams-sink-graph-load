@@ -50,7 +50,7 @@ func TestFastHasher_ListEqual(t *testing.T) {
 	}{
 		{"empty", nil, "320514965852340112707580934281173047643"},
 		{"single", List[Hashable]{U8(1)}, "181745098936733907021518655505145702128"},
-		{"single different", List[Hashable]{U8(2)}, "181745098936733907021518655505145702128"},
+		{"single different", List[Hashable]{U8(2)}, "144465330080491290884666981467855374547"},
 	}
 
 	for _, tt := range tests {

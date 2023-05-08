@@ -3,7 +3,6 @@ package sinker
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -213,8 +212,6 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 
 	proofOfIndexing := poi.NewProofOfIndexing(data.Clock.Number, poi.VersionFast)
 
-	fmt.Printf("POI before process block %d is %s\n", data.Clock.Number, proofOfIndexing.DebugCurrent())
-
 	for _, change := range entityChanges.EntityChanges {
 		jsonlChange, err := bundler.JSONLEncode(&pbentity.EntityChangeAtBlockNum{
 			EntityChange: change,
@@ -234,28 +231,12 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		if err := addEntityChangeToPOI(proofOfIndexing, change); err != nil {
 			return fmt.Errorf("entity change POI: %w", err)
 		}
-
-		fmt.Printf(
-			"POI after entity change (%s @ %s) in block %d is %s (fields %v)\n",
-			change.Entity, change.Id, data.Clock.Number, proofOfIndexing.DebugCurrent(),
-			change.Fields,
-		)
 	}
-
-	fmt.Printf(
-		"Pausing for block %d previous is %s\n",
-		data.Clock.Number, hex.EncodeToString(s.lastPOI),
-	)
 
 	poi, err := proofOfIndexing.Pause(s.lastPOI)
 	if err != nil {
 		return fmt.Errorf("pause proof of indexing: %w", err)
 	}
-
-	fmt.Printf(
-		"Final digest after pause for block %d is %s\n",
-		data.Clock.Number, hex.EncodeToString(poi),
-	)
 
 	poiEntity := getPOIEntity(poi, s.chainID, data.Clock.Number)
 	jsonlPOI, err := bundler.JSONLEncode(poiEntity)

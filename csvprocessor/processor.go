@@ -107,9 +107,9 @@ func (p *Processor) run(ctx context.Context) error {
 
 	entitiesToLoad := []string{}
 	var endRange uint64
-	p.logger.Info("retrieving relevant entity files")
+	p.logger.Info("retrieving relevant entity files", zap.Stringer("store_url", p.inputStore.BaseURL()))
 	fileCount := 0
-	fmt.Println("inputstore is", p.inputStore.BaseURL())
+
 	err := p.inputStore.Walk(context.Background(), "", func(filename string) (err error) {
 		fileCount++
 		startBlockNum, endBlockNum, err := getBlockRange(filename)
