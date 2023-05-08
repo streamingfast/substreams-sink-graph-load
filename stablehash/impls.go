@@ -285,3 +285,17 @@ func (b BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
 	// For reference, ints use child(0) for the sign and write the little endian bytes to the parent slot.
 	(*BigInt)(b.Int).StableHash(addr, hasher)
 }
+
+type List[T Hashable] []T
+
+func (l List[T]) StableHash(addr FieldAddress, hasher Hasher) {
+	for i, value := range l {
+		value.StableHash(addr.Child(uint64(i)), hasher)
+	}
+
+	// This is needed to disambiguate when the last members are default
+	// For example, vec![true, false] and vec![true, false, false] should
+	// not collide.
+	// See also 33a9b3bf-0d43-4fd0-a3ed-a77807505255
+	U64(len(l)).StableHash(addr, hasher)
+}

@@ -42,6 +42,41 @@ func TestFastHasher_TupleAddDefaultField(t *testing.T) {
 	assert.Equal(t, "337538645577122176555714212704832450090", FastHash(tuple).String())
 }
 
+func TestFastHasher_ListEqual(t *testing.T) {
+	tests := []struct {
+		name         string
+		list         List[Hashable]
+		expectedHash string
+	}{
+		{"empty", nil, "320514965852340112707580934281173047643"},
+		{"single", List[Hashable]{U8(1)}, "181745098936733907021518655505145702128"},
+		{"single different", List[Hashable]{U8(2)}, "181745098936733907021518655505145702128"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := List[Hashable](tt.list)
+
+			assert.Equal(t, tt.expectedHash, FastHash(data).String())
+		})
+	}
+
+	// assert_eq!(
+	// 	stable_hash::fast_stable_hash(&vec![1]),
+	// 	181745098936733907021518655505145702128
+	// );
+
+	// assert_eq!(
+	// 	stable_hash::fast_stable_hash(&vec![0, 1, 3]),
+	// 	227549997251239301319289036454140551565
+	// );
+
+	// assert_eq!(
+	// 	stable_hash::fast_stable_hash(&vec![3, 1, 0]),
+	// 	326483836326043537637465019371416215704
+	// );
+}
+
 func TestFastHasher_MapEqual(t *testing.T) {
 	first := MapUnsafe[uint32, string]{
 		1: "one",

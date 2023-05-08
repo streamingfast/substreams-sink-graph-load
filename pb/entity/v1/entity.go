@@ -46,7 +46,7 @@ func (v *Value) toStableHashable() (stablehash.Hashable, byte) {
 		return stablehash.Bool(v.Bool), 0x4
 
 	case *Value_Array:
-		return nil, 0x5
+		return stablehash.List[*Value](v.Array.Value), 0x5
 
 	case *Value_Bytes:
 		data, err := base64.StdEncoding.DecodeString(v.Bytes)
