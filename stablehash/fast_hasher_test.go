@@ -49,8 +49,10 @@ func TestFastHasher_ListEqual(t *testing.T) {
 		expectedHash string
 	}{
 		{"empty", nil, "320514965852340112707580934281173047643"},
-		{"single", List[Hashable]{U8(1)}, "181745098936733907021518655505145702128"},
-		{"single different", List[Hashable]{U8(2)}, "144465330080491290884666981467855374547"},
+		{"single", List[Hashable]{U8(0)}, "135263302447443856369810803691068577694"},
+		{"single different", List[Hashable]{U8(1)}, "181745098936733907021518655505145702128"},
+		{"multiple", List[Hashable]{U8(0), U8(1), U8(3)}, "227549997251239301319289036454140551565"},
+		{"multiple re-ordered", List[Hashable]{U8(3), U8(0), U8(1)}, "318064286550914597684751961019563608459"},
 	}
 
 	for _, tt := range tests {
@@ -60,21 +62,6 @@ func TestFastHasher_ListEqual(t *testing.T) {
 			assert.Equal(t, tt.expectedHash, FastHash(data).String())
 		})
 	}
-
-	// assert_eq!(
-	// 	stable_hash::fast_stable_hash(&vec![1]),
-	// 	181745098936733907021518655505145702128
-	// );
-
-	// assert_eq!(
-	// 	stable_hash::fast_stable_hash(&vec![0, 1, 3]),
-	// 	227549997251239301319289036454140551565
-	// );
-
-	// assert_eq!(
-	// 	stable_hash::fast_stable_hash(&vec![3, 1, 0]),
-	// 	326483836326043537637465019371416215704
-	// );
 }
 
 func TestFastHasher_MapEqual(t *testing.T) {
