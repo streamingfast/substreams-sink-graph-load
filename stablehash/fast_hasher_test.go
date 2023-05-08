@@ -6,6 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// See tests at https://github.com/streamingfast/graph-stable-hash-tests/blob/master/src/lib.rs#L533
+// for the Rust counterpart where most of those tests were taken from. All tests in Rust should
+// pass in Go.
+
 func TestFastHasher_DoubleChild(t *testing.T) {
 	assert.Equal(t, "261232071512772414229682083989926651266", FastHash(&DoubleChild{}).String())
 }
