@@ -2,6 +2,7 @@ package bundler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"time"
@@ -30,6 +31,8 @@ type Bundler struct {
 	uploadQueue    *dhammer.Nailer
 	zlogger        *zap.Logger
 }
+
+var ErrStopBlockReached = errors.New("stop block reached")
 
 func New(
 	size uint64,
@@ -101,7 +104,7 @@ func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 
 	boundaries := boundariesToSkip(b.activeBoundary, blockNum, b.blockCount)
 
-	b.zlogger.Debug("block_num is not in active boundary",
+	b.zlogger.Info("block_num is not in active boundary",
 		zap.Stringer("active_boundary", b.activeBoundary),
 		zap.Int("boundaries_to_skip", len(boundaries)),
 		zap.Uint64("block_num", blockNum),
@@ -112,7 +115,7 @@ func (b *Bundler) Roll(ctx context.Context, blockNum uint64) error {
 	}
 
 	if blockNum >= b.stopBlock {
-		return nil
+		return ErrStopBlockReached
 	}
 
 	for _, boundary := range boundaries {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -166,7 +167,13 @@ func (s *EntitiesSink) rollAllBundlers(ctx context.Context, blockNum uint64) {
 		wg.Add(1)
 		eb := entityBundler
 		go func() {
-			eb.Roll(ctx, blockNum)
+			if err := eb.Roll(ctx, blockNum); err != nil {
+				// no worries, Shutdown can and will be called multiple times
+				if errors.Is(err, bundler.ErrStopBlockReached) {
+					err = nil
+				}
+				s.Shutdown(err)
+			}
 			wg.Done()
 		}()
 	}
@@ -175,7 +182,10 @@ func (s *EntitiesSink) rollAllBundlers(ctx context.Context, blockNum uint64) {
 	wg.Wait()
 }
 
-func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstreamsrpc.BlockScopedData, isLive *bool, cursor *sink.Cursor) error {
+func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstreamsrpc.BlockScopedData, _ *bool, cursor *sink.Cursor) error {
+	if s.IsTerminating() {
+		return nil
+	}
 	output := data.Output
 
 	if output.Name != s.OutputModuleName() {
@@ -197,6 +207,9 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 	}
 
 	s.rollAllBundlers(ctx, data.Clock.Number)
+	if s.IsTerminating() {
+		return nil
+	}
 
 	proofOfIndexing := poi.NewProofOfIndexing(data.Clock.Number, poi.VersionFast)
 

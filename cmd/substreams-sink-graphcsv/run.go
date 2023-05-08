@@ -30,8 +30,20 @@ var SinkRunCmd = Command(sinkRunE,
 	"Runs substreams sinker to CSV files",
 	ExactArgs(5),
 	Flags(func(flags *pflag.FlagSet) {
-		// FIXME: this adds FinalBlockOnly, etc. which is ignored here
-		sink.AddFlagsToSet(flags)
+
+		flags.BoolP("insecure", "k", false, "Skip certificate validation on GRPC connection")
+		flags.BoolP("plaintext", "p", false, "Establish GRPC connection in plaintext")
+		flags.Bool("development-mode", false, "Enable development mode, use it for testing purpose only, should not be used for production workload")
+		flags.Bool("infinite-retry", false, "Default behavior is to retry 15 times spanning approximatively 5m before exiting with an error, activating this flag will retry forever")
+
+		// so we can use sinker.NewFromViper
+		flags.Int("undo-buffer-size", 0, "DO NOT TOUCH THIS FLAG")
+		flags.Duration("live-block-time-delta", 300*time.Second, "DO NOT TOUCH THIS FLAG")
+		flags.Bool("final-blocks-only", true, "DO NOT TOUCH THIS FLAG")
+		// Deprecated flags from sinker.NewFromViper
+		flags.Bool("irreversible-only", false, "DO NOT TOUCH THIS FLAG")
+		flags.Lookup("irreversible-only").Deprecated = "Renamed to --final-blocks-only"
+
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
 		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
@@ -72,7 +84,6 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		endpoint, manifestPath, outputModuleName, blockRange,
 		zlog,
 		tracer,
-		sink.WithFinalBlocksOnly(), // always set this to true
 	)
 	if err != nil {
 		return fmt.Errorf("unable to setup sinker: %w", err)
