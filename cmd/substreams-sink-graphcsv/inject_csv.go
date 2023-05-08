@@ -215,7 +215,7 @@ func extractFieldsFromFirstLine(ctx context.Context, filename string, store dsto
 	if out[0] != "id" {
 		return nil, fmt.Errorf("invalid CSV: first column should be 'id'")
 	}
-	if out[1] != "block_range" || out[1] != "block$" {
+	if out[1] != "block_range" && out[1] != "block$" {
 		return nil, fmt.Errorf("invalid CSV: second column should be 'block_range' or 'block$'")
 	}
 
