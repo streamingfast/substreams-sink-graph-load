@@ -139,6 +139,9 @@ func NewWriter(ctx context.Context, store dstore.Store, filename string) (*Write
 
 func (c *Writer) WriteHeader(desc *schema.EntityDesc) error {
 	records := []string{"id", "block_range"}
+	if desc.Immutable {
+		records[1] = "block$"
+	}
 	for _, f := range desc.OrderedFields() {
 		if f.Name == "id" {
 			continue
@@ -154,6 +157,10 @@ func (c *Writer) Write(e *Entity, desc *schema.EntityDesc, stopBlock uint64) err
 	records := []string{
 		formatField(e.Fields["id"], schema.FieldTypeID, false, false),
 		blockRange(e.StartBlock, stopBlock),
+	}
+
+	if desc.Immutable {
+		records[1] = fmt.Sprint(e.StartBlock)
 	}
 
 	for _, f := range desc.OrderedFields() {
