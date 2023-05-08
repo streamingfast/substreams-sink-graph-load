@@ -23,7 +23,7 @@ import (
 
 var injectCSVCmd = Command(injectCSVE,
 	"inject-csv (deployment-hash|sgdx-schema) <input-path> <entity> <graphql-schema> <psql-dsn> <start-block> <stop-block>",
-	"Injects generated CSV entities for <subgraph-name>'s deployment version <version> into the database pointed by <psql-dsn> argument. Can be run in parallel for multiple entities up to the same stop-block",
+	"Injects generated CSV entities for <subgraph-name>'s deployment version <version> into the database pointed by <psql-dsn> argument. Can be run in parallel for multiple entities up to the same stop-block. Watch out, the start-block must be aligned with the range size of the csv files or the module inital block",
 	ExactArgs(7),
 	Flags(func(flags *pflag.FlagSet) {}),
 )
@@ -303,7 +303,7 @@ func (t *TableFiller) injectFile(ctx context.Context, filename string, dbFields,
 
 func injectFilesToLoad(inputStore dstore.Store, tableName string, stopBlockNum, desiredStartBlockNum uint64) (out []string, err error) {
 	err = inputStore.Walk(context.Background(), tableName+"/", func(filename string) (err error) {
-		startBlockNum, _, err := getBlockRange(filename)
+		startBlockNum, endBlockNum, err := getBlockRange(filename)
 		if err != nil {
 			return fmt.Errorf("fail reading block range in %q: %w", filename, err)
 		}
@@ -312,7 +312,7 @@ func injectFilesToLoad(inputStore dstore.Store, tableName string, stopBlockNum, 
 			return dstore.StopIteration
 		}
 
-		if startBlockNum < desiredStartBlockNum {
+		if endBlockNum < desiredStartBlockNum {
 			return nil
 		}
 
