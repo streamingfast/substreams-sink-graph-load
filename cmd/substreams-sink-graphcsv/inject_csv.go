@@ -80,19 +80,23 @@ func injectCSVE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("connecting to postgres: %w", err)
 	}
 
-	nonNullableFields := []string{"id", "block_range"}
 	graphqlEntities, err := schema.GetEntitiesFromSchema(graphqlSchema)
 	if err != nil {
 		return fmt.Errorf("reading schema from %q: %w", graphqlSchema, err)
 	}
 
+	nonNullableFields := []string{"id"}
 	for _, ent := range graphqlEntities {
 		if ent.Name != entity {
 			continue
 		}
 
 		for _, f := range ent.Fields {
-			if f.Name == "id" || f.Name == "block_range" {
+			if f.Name == "id" {
+				continue
+			}
+			if f.Name == "block_range" || f.Name == "block$" {
+				nonNullableFields = append(nonNullableFields, f.Name)
 				continue
 			}
 			if !f.Nullable {
@@ -211,8 +215,8 @@ func extractFieldsFromFirstLine(ctx context.Context, filename string, store dsto
 	if out[0] != "id" {
 		return nil, fmt.Errorf("invalid CSV: first column should be 'id'")
 	}
-	if out[1] != "block_range" {
-		return nil, fmt.Errorf("invalid CSV: second column should be 'block_range'")
+	if out[1] != "block_range" || out[1] != "block$" {
+		return nil, fmt.Errorf("invalid CSV: second column should be 'block_range' or 'block$'")
 	}
 
 	return out, nil
