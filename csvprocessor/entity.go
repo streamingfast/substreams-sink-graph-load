@@ -38,7 +38,7 @@ func (e *Entity) Update(newEnt *Entity) {
 func (e *Entity) ValidateFields(desc *schema.EntityDesc) error {
 	for _, field := range desc.OrderedFields() {
 		if !field.Nullable && e.Fields[field.Name] == nil {
-			return fmt.Errorf("field %s cannot be nil on entity %s at ID %s", field.Name, field.Type, e.Fields["id"])
+			return fmt.Errorf("field %q cannot be nil on entity %s at ID %s", field.Name, field.Type, e.Fields["id"])
 		}
 	}
 

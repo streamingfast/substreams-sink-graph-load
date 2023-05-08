@@ -230,11 +230,11 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 		switch ch.EntityChange.Operation {
 		case pbentity.EntityChange_CREATE:
 			if found {
-				return fmt.Errorf("got CREATE on entity %q but it already exists", ch.EntityChange.ID)
+				return fmt.Errorf("@%d got CREATE on entity %q but it already exists", ch.BlockNum, ch.EntityChange.ID)
 			}
 
 			if err := newEnt.ValidateFields(p.entityDesc); err != nil {
-				return fmt.Errorf("during CREATE: %w", err)
+				return fmt.Errorf("@%d during CREATE: %w", ch.BlockNum, err)
 			}
 
 			if p.entityDesc.Immutable {
@@ -248,7 +248,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 		case pbentity.EntityChange_UPDATE:
 			if p.entityDesc.Immutable {
 				if err := newEnt.ValidateFields(p.entityDesc); err != nil {
-					return fmt.Errorf("during UPDATE to an immutable entity: %w", err)
+					return fmt.Errorf("@%d during UPDATE to an immutable entity: %w", ch.BlockNum, err)
 				}
 				if err := p.csvOutput.Write(newEnt, p.entityDesc, 0); err != nil {
 					return err
@@ -259,7 +259,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			}
 			if !found {
 				if err := newEnt.ValidateFields(p.entityDesc); err != nil {
-					return fmt.Errorf("during UPDATE to an unseen entity: %w", err)
+					return fmt.Errorf("@%d during UPDATE to an unseen entity: %w", ch.BlockNum, err)
 				}
 				p.entities[ch.EntityChange.ID] = newEnt
 				continue
@@ -267,7 +267,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 				//return fmt.Errorf("entity %q got updated but previous value not found", ch.EntityChange.ID)
 			}
 			if err := prev.ValidateFields(p.entityDesc); err != nil {
-				return fmt.Errorf("during UPDATE to an existing entity: %w", err)
+				return fmt.Errorf("@%d during UPDATE to an existing entity: %w", ch.BlockNum, err)
 			}
 			if err := p.csvOutput.Write(prev, p.entityDesc, ch.BlockNum); err != nil {
 				return err
