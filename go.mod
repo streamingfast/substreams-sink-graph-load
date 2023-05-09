@@ -13,14 +13,14 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/streamingfast/bstream v0.0.2-0.20230407143220-06c919ae8476
-	github.com/streamingfast/cli v0.0.4-0.20230420210357-3bebdb9f2fbf
+	github.com/streamingfast/cli v0.0.4-0.20230508203625-ecd532feb120
 	github.com/streamingfast/dhammer v0.0.0-20220506192416-3797a7906da2
 	github.com/streamingfast/dmetrics v0.0.0-20221129121022-a1733eca1981
 	github.com/streamingfast/dstore v0.1.1-0.20230503161221-fd4278f938b1
 	github.com/streamingfast/logging v0.0.0-20221209193439-bff11742bf4c
 	github.com/streamingfast/shutter v1.5.0
 	github.com/streamingfast/substreams v1.0.2-0.20230418195519-fa17a36fd728
-	github.com/streamingfast/substreams-sink v0.1.1-0.20230502181512-ab5118242ed9
+	github.com/streamingfast/substreams-sink v0.2.2-0.20230509165142-4220952d2f77
 	github.com/stretchr/testify v1.8.1
 	github.com/vektah/gqlparser v1.3.1
 	github.com/zeebo/xxh3 v1.0.2
