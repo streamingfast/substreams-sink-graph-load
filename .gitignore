@@ -7,3 +7,4 @@ devel/eth-block-meta/csv
 /out
 /outcsv
 /schema.graphql
+substreams-sink-graphcsv
