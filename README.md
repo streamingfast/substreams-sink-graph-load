@@ -1,56 +1,61 @@
-# Substreams graph-node entity CSV writer
+# Substreams to Subgraphs high-speed injector
 
-This is a command line tool to quickly sync a substream to CSV files that can then be imported directly into the postgresql database of a subgraph
+This tool enables high-speed writes from a Substreams-based Subgraph and is 100% compatible with `graph-node`'s injection behavior (writing to postgres), including proofs of indexing.
 
-### Running It
+It is an optional injection method that trades off high-speed injection for slightly more involved devops work.
 
-1) Your substreams needs to implement a `map` that has an output type of `proto:substreams.entity.v1.EntityChanges`.
-   By convention, we name the `map` module `graph_out`. The [substreams-entity-change](https://github.com/streamingfast/substreams-entity-change) crate, contains the rust objects.
+High-speed here means one or two orders of magnitude faster.
 
+### Requirement
 
-2) Run the sink
+* A Substreams package with a map module outputting `proto:substreams.entity.v1.EntityChanges`.
+  * By convention, we use the module name `graph_out`
+  * The [substreams-entity-change](https://github.com/streamingfast/substreams-entity-change) crate, contains the Rust objects and helpers to accelerate development of Substreams-based Subgraphs.
+
+### Install
+
+```bash
+go install github.com/streamingfast/substreams-sink-graphcsv/cmd/substreams-sink-graphcsv@latest
+```
+
+### Run
 
 | Note: to connect to substreams you will need an authentication token, follow this [guide](https://substreams.streamingfast.io/reference-and-specs/authentication) |
 |-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
-Usage:
-
-```shell
-Runs substreams sinker to CSV files
-
-Usage:
-  substreams-sink-graphcsv run <destination-folder> <endpoint> <manifest> <module> <stop> [flags]
-
-Flags:
-  -h, --help        help for run
-  -k, --insecure    Skip certificate validation on GRPC connection
-  -p, --plaintext   Establish GRPC connection in plaintext
-
-Global Flags:
-      --delay-before-start duration   [OPERATOR] Amount of time to wait before starting any internal processes, can be used to perform to maintenance on the pod before actually letting it starts
-      --metrics-listen-addr string    [OPERATOR] If non-empty, the process will listen on this address for Prometheus metrics request(s) (default "localhost:9102")
-      --pprof-listen-addr string      [OPERATOR] If non-empty, the process will listen on this address for pprof analysis (see https://golang.org/pkg/net/http/pprof/) (default "localhost:6060")
+Process the Substreams and write entities to disk:
+```bash
+substreams-sink-graphcsv run --chain-id ethereum/mainnet --graphsql-schema ./path/to/schema.graphql /tmp/substreams-csv mainnet.eth.streamingfast.io:443 ./substreams-v0.0.1.spkg graph_out 100000
 ```
 
-Example:
+Produce the CSV files based on an already-processed dump of entities:
 
-```shell
-go install ./cmd/substreams-sink-graphcsv
-substreams-sink-graphcsv run \
-/tmp/substreams-csv \
-mainnet.eth.streamingfast.io:443 \
-./substreams-v0.0.1.spkg \
-graph_out \
-100000
+```bash
+for i in $(ls out); do echo $i; substreams-sink-graphcsv tocsv $(pwd)/out $(pwd)/outcsv $i  12371850    --bundle-size=100 --graphql-schema=../substreams-uniswap-v3/schema.graphql    ; done
 ```
 
-Development commands:
+Inject into postgres:
+
+```bash
+substreams-sink-graphcsv inject [INSERT SAMPLE PARAMS]
 ```
+
+Handoff to `graph-node`:
+
+```bash
+substreams-sink-graphcsv handoff [INSERT SAMPLE PARAMS]
+```
+
+### Dev commands
+
+```bash
 go install -v ./cmd/substreams-sink-graphcsv
 
 time substreams-sink-graphcsv run $(pwd)/out api.streamingfast.io:443 ../substreams-uniswap-v3/substreams.yaml graph_out   12371895   --bundle-size=100 --graphql-schema=../substreams-uniswap-v3/schema.graphql
 
-
 for i in $(ls out); do echo $i; substreams-sink-graphcsv tocsv $(pwd)/out $(pwd)/outcsv $i  12371850    --bundle-size=100 --graphql-schema=../substreams-uniswap-v3/schema.graphql    ; done
-
 ```
+
+## LICENSE
+
+Apache 2.0
