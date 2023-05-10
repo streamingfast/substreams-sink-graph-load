@@ -12,8 +12,9 @@ type Stats struct {
 
 	// dbFlushRate    *dmetrics.AvgRatePromCounter
 	// flusehdEntries *dmetrics.ValueFromMetric
-	lastBlock uint64
-	logger    *zap.Logger
+	lastBlock     uint64
+	lastBlockHash string
+	logger        *zap.Logger
 }
 
 func NewStats(logger *zap.Logger) *Stats {
@@ -30,6 +31,10 @@ func NewStats(logger *zap.Logger) *Stats {
 
 func (s *Stats) RecordBlock(block uint64) {
 	s.lastBlock = block
+}
+
+func (s *Stats) RecordLastBlockHash(blockHash string) {
+	s.lastBlockHash = blockHash
 }
 
 func (s *Stats) Start(each time.Duration) {

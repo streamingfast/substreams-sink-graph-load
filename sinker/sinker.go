@@ -1,6 +1,7 @@
 package sinker
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -157,6 +158,16 @@ func (s *EntitiesSink) Run(ctx context.Context) {
 
 func (s *EntitiesSink) handleStopBlockReached(ctx context.Context) error {
 	s.rollAllBundlers(ctx, s.stopBlock)
+
+	store, err := dstore.NewSimpleStore(s.destFolder)
+	if err != nil {
+		return fmt.Errorf("failed to initialize store at path %s: %w", s.destFolder, err)
+	}
+	lastBlockAndCursor := fmt.Sprintf("%d:%s\n", s.stats.lastBlock, s.stats.lastBlockHash)
+	if err := store.WriteObject(context.Background(), "last_block.txt", bytes.NewReader([]byte(lastBlockAndCursor))); err != nil {
+		s.logger.Warn("could not write last block")
+	}
+
 	return nil
 }
 
@@ -247,6 +258,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 
 	s.lastPOI = poi
 	s.stats.RecordBlock(cursor.Block().Num())
+	s.stats.RecordLastBlockHash(cursor.Block().ID())
 
 	return nil
 }
