@@ -163,8 +163,8 @@ func (s *EntitiesSink) handleStopBlockReached(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize store at path %s: %w", s.destFolder, err)
 	}
-	lastBlockAndCursor := fmt.Sprintf("%d:%s\n", s.stats.lastBlock, s.stats.lastBlockHash)
-	if err := store.WriteObject(context.Background(), "last_block.txt", bytes.NewReader([]byte(lastBlockAndCursor))); err != nil {
+	lastBlockAndHash := fmt.Sprintf("%d:%s\n", s.stats.lastBlock, s.stats.lastBlockHash)
+	if err := store.WriteObject(context.Background(), "last_block.txt", bytes.NewReader([]byte(lastBlockAndHash))); err != nil {
 		s.logger.Warn("could not write last block")
 	}
 

@@ -3,8 +3,8 @@ name: Build and Test
 on:
   push:
     branches:
-      - master
-      - develop
+      - "master"
+      - "develop"
       - "release/v*"
   pull_request:
     branches:
