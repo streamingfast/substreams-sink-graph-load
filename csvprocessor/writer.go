@@ -186,7 +186,7 @@ func panicIfNotNullable(isNullable bool) {
 func toEscapedStringArray(in []interface{}, formatter string) string {
 	outs := make([]string, len(in))
 	for i := range in {
-		formatted := in[i].(string)
+		formatted := toValidString(in[i])
 		outs[i] = strings.ReplaceAll(strings.ReplaceAll(formatted, `\`, `\\`), `,`, `\,`)
 	}
 	return "{" + strings.Join(outs, ",") + "}"
@@ -198,6 +198,10 @@ func toInt32Array(in []interface{}, formatter string) string {
 		outs = append(outs, fmt.Sprintf(formatter, in[int32(in[i].(float64))]))
 	}
 	return "{" + strings.Join(outs, ",") + "}"
+}
+
+func toValidString(in interface{}) string {
+	return strings.Replace(in.(string), "\x00", "", -1)
 }
 
 func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {
@@ -212,7 +216,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 		if isArray {
 			return toEscapedStringArray(f.([]interface{}), "%s")
 		}
-		return f.(string)
+		return toValidString(f)
 	case schema.FieldTypeBytes:
 		if f == nil {
 			if isNullable {
@@ -223,7 +227,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 		if isArray {
 			return toEscapedStringArray(f.([]interface{}), "%s")
 		}
-		return f.(string)
+		return toValidString(f)
 	case schema.FieldTypeBigInt:
 		if f == nil {
 			if isNullable {
@@ -234,7 +238,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 		if isArray {
 			return toEscapedStringArray(f.([]interface{}), "%s")
 		}
-		return f.(string)
+		return toValidString(f)
 	case schema.FieldTypeBigDecimal:
 		if f == nil {
 			if isNullable {
@@ -245,7 +249,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 		if isArray {
 			return toEscapedStringArray(f.([]interface{}), "%s")
 		}
-		return f.(string)
+		return toValidString(f)
 	case schema.FieldTypeInt:
 		if f == nil {
 			if isNullable {
