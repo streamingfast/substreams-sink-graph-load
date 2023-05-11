@@ -6,6 +6,8 @@ It is an optional injection method that trades off high-speed injection for slig
 
 High-speed here means one or two orders of magnitude faster.
 
+(Repository was previously named `substreams-sink-graphcsv`)
+
 ## Requirement
 
 * A Substreams package with a map module outputting `proto:substreams.entity.v1.EntityChanges`.
