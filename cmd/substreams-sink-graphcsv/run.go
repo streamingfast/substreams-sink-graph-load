@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-sink-graphcsv/schema"
 	"github.com/streamingfast/substreams-sink-graphcsv/sinker"
-	"github.com/streamingfast/substreams/manifest"
 	"go.uber.org/zap"
 )
 
@@ -67,23 +65,15 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	endpoint := args[1]
 	manifestPath := args[2]
 	outputModuleName := args[3]
-	stopBlock, err := strconv.ParseUint(args[4], 10, 64)
-	if err != nil {
-		return fmt.Errorf("stopBlock must be a uint64")
-	}
-
-	startBlock, err := getStartBlock(manifestPath, outputModuleName)
-	if err != nil {
-		return fmt.Errorf("getting startblock from substreams manifest: %w", err)
-	}
-	blockRange := fmt.Sprintf("%d:%d", startBlock, stopBlock)
+	stopBlock := args[4]
 
 	sink, err := sink.NewFromViper(
 		cmd,
 		sink.IgnoreOutputModuleType,
-		endpoint, manifestPath, outputModuleName, blockRange,
+		endpoint, manifestPath, outputModuleName, ":"+stopBlock,
 		zlog,
 		tracer,
+		sink.WithFinalBlocksOnly(),
 	)
 	if err != nil {
 		return fmt.Errorf("unable to setup sinker: %w", err)
@@ -119,7 +109,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, stopBlock, chainID, zlog, tracer)
+	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, zlog, tracer)
 	if err != nil {
 		return fmt.Errorf("unable to setup csv sinker: %w", err)
 	}
@@ -159,21 +149,4 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	<-entitySink.Terminated()
 	zlog.Info("run terminated gracefully")
 	return nil
-}
-
-func getStartBlock(manifestPath, outputModuleName string) (uint64, error) {
-	pkg, err := manifest.NewReader(manifestPath).Read()
-	if err != nil {
-		return 0, fmt.Errorf("read manifest: %w", err)
-	}
-	graph, err := manifest.NewModuleGraph(pkg.Modules.Modules)
-	if err != nil {
-		return 0, fmt.Errorf("create substreams module graph: %w", err)
-	}
-	module, err := graph.Module(outputModuleName)
-	if err != nil {
-		return 0, fmt.Errorf("create substreams module graph: %w", err)
-	}
-
-	return module.InitialBlock, nil
 }

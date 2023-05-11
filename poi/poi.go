@@ -24,7 +24,7 @@ func NewProofOfIndexing(blockNumber uint64, version Version) *ProofOfIndexing {
 		stream: &BlockEventStream{
 			vecLength:    0,
 			handlerStart: 0,
-			blockIndex:   blockNumber,
+			blockNumber:  blockNumber,
 			hasher:       stablehash.NewFastHasher(),
 		},
 	}
@@ -47,7 +47,7 @@ func (p *ProofOfIndexing) RemoveEntity(entity *pbentity.EntityChange) {
 // Pause returns the current `poi` bytes up to now.
 func (p *ProofOfIndexing) Pause(prev []byte) ([]byte, error) {
 	p.stream.fastHasherWrite(stablehash.U64(p.stream.vecLength), []uint64{
-		1, 0, p.stream.blockIndex, 0,
+		1, 0, p.stream.blockNumber, 0,
 	})
 
 	if len(prev) > 0 {
@@ -81,16 +81,16 @@ func (p *ProofOfIndexing) DebugCurrent() string {
 type BlockEventStream struct {
 	vecLength    uint64
 	handlerStart uint64
-	blockIndex   uint64
+	blockNumber  uint64
 	hasher       stablehash.Hasher
 }
 
 func (e *BlockEventStream) Write(event ProofOfIndexingEvent) {
 	children := []uint64{
-		1,            // kvp -> v
-		0,            // PoICausalityRegion.blocks: Vec<Block>
-		e.blockIndex, // Vec<Block> -> [i]
-		0,            // Block.events -> Vec<ProofOfIndexingEvent>
+		1,             // kvp -> v
+		0,             // PoICausalityRegion.blocks: Vec<Block>
+		e.blockNumber, // Vec<Block> -> [i]
+		0,             // Block.events -> Vec<ProofOfIndexingEvent>
 		e.vecLength,
 	}
 

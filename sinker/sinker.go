@@ -48,10 +48,15 @@ func New(
 	entities []string,
 	bundleSize uint64,
 	bufferSize uint64,
-	stopBlock uint64,
 	chainID string,
 	logger *zap.Logger,
-	tracer logging.Tracer) (*EntitiesSink, error) {
+	tracer logging.Tracer,
+) (*EntitiesSink, error) {
+	blockRange := sink.BlockRange()
+	if blockRange == nil || blockRange.EndBlock() == nil {
+		return nil, fmt.Errorf("sink must have a stop block defined")
+	}
+
 	s := &EntitiesSink{
 		Shutter: shutter.New(),
 		Sinker:  sink,
@@ -61,7 +66,7 @@ func New(
 		logger:       logger,
 		tracer:       tracer,
 		chainID:      chainID,
-		stopBlock:    stopBlock,
+		stopBlock:    *blockRange.EndBlock(),
 
 		stats: NewStats(logger),
 	}
@@ -72,14 +77,14 @@ func New(
 	}
 
 	for _, entity := range entities {
-		fb, err := getBundler(entity, s.Sinker.BlockRange().StartBlock(), stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
+		fb, err := getBundler(entity, s.Sinker.BlockRange().StartBlock(), s.stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
 		if err != nil {
 			return nil, err
 		}
 		s.fileBundlers[entity] = fb
 	}
 
-	poiBundler, err := getBundler(schema.PoiEntityName, s.Sinker.BlockRange().StartBlock(), stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
+	poiBundler, err := getBundler(schema.PoiEntityName, s.Sinker.BlockRange().StartBlock(), s.stopBlock, bundleSize, bufferSize, baseOutputStore, workingDir, logger)
 	if err != nil {
 		return nil, err
 	}
