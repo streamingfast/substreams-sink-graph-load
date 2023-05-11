@@ -2,7 +2,9 @@ package csvprocessor
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/csv"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
@@ -192,6 +194,14 @@ func toEscapedStringArray(in []interface{}, formatter string) string {
 	return "{" + strings.Join(outs, ",") + "}"
 }
 
+func toHexArray(in []interface{}, formatter string) string {
+	outs := make([]string, len(in))
+	for i := range in {
+		outs[i] = toHex(in[i])
+	}
+	return "{" + strings.Join(outs, ",") + "}"
+}
+
 func toInt32Array(in []interface{}, formatter string) string {
 	outs := make([]string, len(in))
 	for i := range in {
@@ -202,6 +212,16 @@ func toInt32Array(in []interface{}, formatter string) string {
 
 func toValidString(in interface{}) string {
 	return strings.Replace(in.(string), "\x00", "", -1)
+}
+
+func toHex(in interface{}) string {
+
+	b, err := base64.StdEncoding.DecodeString(in.(string))
+	if err != nil {
+		panic("received invalid data")
+	}
+	return hex.EncodeToString(b)
+
 }
 
 func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {
@@ -225,9 +245,9 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 			return ""
 		}
 		if isArray {
-			return toEscapedStringArray(f.([]interface{}), "%s")
+			return toHexArray(f.([]interface{}), "%s")
 		}
-		return toValidString(f)
+		return toHex(f)
 	case schema.FieldTypeBigInt:
 		if f == nil {
 			if isNullable {
