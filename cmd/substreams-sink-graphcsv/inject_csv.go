@@ -109,6 +109,7 @@ func injectCSVE(cmd *cobra.Command, args []string) error {
 	t0 := time.Now()
 
 	tableName := entity
+	zlog.Debug("table filler", zap.String("pg_schema", pgSchema), zap.String("table_name", tableName), zap.Uint64("start_block", startBlock), zap.Uint64("stop_block", stopBlock))
 	filler := NewTableFiller(pool, pgSchema, tableName, startBlock, stopBlock, nonNullableFields, inputStore)
 	theTableName := tableName
 	if err := filler.Run(ctx); err != nil {
