@@ -254,14 +254,16 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		return fmt.Errorf("pause proof of indexing: %w", err)
 	}
 
-	poiEntity := getPOIEntity(poi, s.chainID, data.Clock.Number)
-	jsonlPOI, err := bundler.JSONLEncode(poiEntity)
-	if err != nil {
-		return err
-	}
-	s.poiBundler.Writer().Write(jsonlPOI)
+	if !bytes.Equal(poi, s.lastPOI) {
+		poiEntity := getPOIEntity(poi, s.chainID, data.Clock.Number)
+		jsonlPOI, err := bundler.JSONLEncode(poiEntity)
+		if err != nil {
+			return err
+		}
+		s.poiBundler.Writer().Write(jsonlPOI)
 
-	s.lastPOI = poi
+		s.lastPOI = poi
+	}
 	s.stats.RecordBlock(cursor.Block().Num())
 	s.stats.RecordLastBlockHash(cursor.Block().ID())
 
