@@ -8,6 +8,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/lib/pq v1.10.2
 	github.com/shabbyrobe/go-num v0.0.0-20220218224608-bad1c8f534d7
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5

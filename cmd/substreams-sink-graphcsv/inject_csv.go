@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	. "github.com/streamingfast/cli"
@@ -344,7 +345,6 @@ func createPostgresDB(ctx context.Context, connectionInfo *postgres.DSN) (*sqlx.
 
 func getSubgraphSchema(ctx context.Context, db *sqlx.DB, deploymentID string) (string, error) {
 	query := `
-	SELECT
 	select name AS schema 
 	FROM public.deployment_schemas 
 	WHERE subgraph = $1`
