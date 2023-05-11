@@ -21,7 +21,7 @@ func init() {
 }
 
 func main() {
-	Run("substreams-sink-graphcsv", "Substreams TheGraph CSV Sink",
+	Run("graphload", "Substreams to Subgraphs high-speed injector",
 		SinkRunCmd,
 		injectCSVCmd,
 		toCSVCmd,

@@ -13,8 +13,8 @@ import (
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
-	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
-	"github.com/streamingfast/substreams-sink-graphcsv/schema"
+	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
+	"github.com/streamingfast/substreams-graph-load/schema"
 	"go.uber.org/zap"
 )
 

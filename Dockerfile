@@ -10,8 +10,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     ca-certificates libssl1.1 vim strace lsof curl jq && \
     rm -rf /var/cache/apt /var/lib/apt/lists/*
 
-ADD /substreams-sink-graphcsv /app/substreams-sink-graphcsv
+ADD /graphload /app/graphload
 
 ENV PATH "$PATH:/app"
 
-ENTRYPOINT ["/app/substreams-sink-graphcsv"]
+ENTRYPOINT ["/app/graphload"]

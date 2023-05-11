@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/streamingfast/substreams-sink-graphcsv/stablehash"
+	"github.com/streamingfast/substreams-graph-load/stablehash"
 )
 
 func (v *Value) StableHash(addr stablehash.FieldAddress, hasher stablehash.Hasher) {

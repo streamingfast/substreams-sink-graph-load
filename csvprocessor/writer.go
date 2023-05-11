@@ -11,7 +11,7 @@ import (
 
 	"github.com/streamingfast/bstream"
 	"github.com/streamingfast/dstore"
-	"github.com/streamingfast/substreams-sink-graphcsv/schema"
+	"github.com/streamingfast/substreams-graph-load/schema"
 )
 
 type WriterManager struct {

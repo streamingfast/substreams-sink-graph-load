@@ -1,4 +1,4 @@
-module github.com/streamingfast/substreams-sink-graphcsv
+module github.com/streamingfast/substreams-graph-load
 
 go 1.18
 

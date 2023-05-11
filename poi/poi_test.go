@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
+	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/stretchr/testify/assert"
 )
 

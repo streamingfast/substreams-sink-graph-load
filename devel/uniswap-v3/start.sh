@@ -8,7 +8,7 @@ main() {
   set -e
 
   out="${OUT_DIR}:-"$ROOT/csv"}"
-  sink="$ROOT/../substreams-sink-graphcsv"
+  sink="$ROOT/../graphload"
 
   echo dsn
   set -x

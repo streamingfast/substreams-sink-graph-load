@@ -13,8 +13,8 @@ import (
 	"github.com/streamingfast/cli/sflags"
 	"github.com/streamingfast/shutter"
 	sink "github.com/streamingfast/substreams-sink"
-	"github.com/streamingfast/substreams-sink-graphcsv/csvprocessor"
-	"github.com/streamingfast/substreams-sink-graphcsv/sinker"
+	"github.com/streamingfast/substreams-graph-load/csvprocessor"
+	"github.com/streamingfast/substreams-graph-load/sinker"
 	"go.uber.org/zap"
 )
 

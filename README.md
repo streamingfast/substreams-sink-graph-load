@@ -15,7 +15,7 @@ High-speed here means one or two orders of magnitude faster.
 ## Install
 
 ```bash
-go install github.com/streamingfast/substreams-sink-graphcsv/cmd/substreams-sink-graphcsv@latest
+go install github.com/streamingfast/substreams-graph-load/cmd/graphload@latest
 ```
 
 ## Use it to quickly fill your subgraph database
@@ -31,14 +31,14 @@ go install github.com/streamingfast/substreams-sink-graphcsv/cmd/substreams-sink
 2. Write the entities to disk, from substreams
 
 ```bash
-substreams-sink-graphcsv run --chain-id=ethereum/mainnet --graphsql-schema=/path/to/schema.graphql --bundle-size=10000 /tmp/substreams-entities mainnet.eth.streamingfast.io:443 ./substreams-v0.0.1.spkg graph_out 17230000
+graphload run --chain-id=ethereum/mainnet --graphsql-schema=/path/to/schema.graphql --bundle-size=10000 /tmp/substreams-entities mainnet.eth.streamingfast.io:443 ./substreams-v0.0.1.spkg graph_out 17230000
 ```
 
 3. Produce the CSV files based on an already-processed dump of entities:
 
 ```bash
 for entity in $(cd /tmp/substreams-entities && ls); do 
-    substreams-sink-graphcsv tocsv /tmp/susbtreams-entities /tmp/substreams-csv $entity 17230000 --bundle-size=10000 --graphql-schema=/path/to/schema.graphql
+    graphload tocsv /tmp/susbtreams-entities /tmp/substreams-csv $entity 17230000 --bundle-size=10000 --graphql-schema=/path/to/schema.graphql
 done
 ```
 
@@ -69,14 +69,14 @@ graphman -c /etc/graph-node/config.toml rewind 0x6a3bb2ef0a20f5503495238e54fef23
 
 ```bash
 for entity in $(cd /tmp/substreams-csv && ls); do
-    substreams-sink-graphcsv inject-csv QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr /tmp/substreams-csv $entity /path/to/schema.graphql 'postgresql://user:password@database.ip:5432/database' 12360000 17230000
+    graphload inject-csv QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr /tmp/substreams-csv $entity /path/to/schema.graphql 'postgresql://user:password@database.ip:5432/database' 12360000 17230000
 done
 ```
 
 2. Inform `graph-node` of the latest indexed block:
 
 ```bash
-substreams-sink-graphcsv handoff QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr 0x0bdf3e2805450d917fbedb4d6f930d34261c3189eb14274e0b113302b28e59fe 17229999 'postgresql://user:password@database.ip:5432/database'
+graphload handoff QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr 0x0bdf3e2805450d917fbedb4d6f930d34261c3189eb14274e0b113302b28e59fe 17229999 'postgresql://user:password@database.ip:5432/database'
 ```
 
 3. Restart `graph-node` indexing:

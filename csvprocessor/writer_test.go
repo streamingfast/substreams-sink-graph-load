@@ -3,7 +3,7 @@ package csvprocessor
 import (
 	"testing"
 
-	"github.com/streamingfast/substreams-sink-graphcsv/schema"
+	"github.com/streamingfast/substreams-graph-load/schema"
 	"github.com/stretchr/testify/assert"
 )
 

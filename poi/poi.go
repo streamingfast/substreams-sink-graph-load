@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	pbentity "github.com/streamingfast/substreams-sink-graphcsv/pb/entity/v1"
-	"github.com/streamingfast/substreams-sink-graphcsv/stablehash"
+	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
+	"github.com/streamingfast/substreams-graph-load/stablehash"
 	"go.uber.org/zap"
 )
 

@@ -17,8 +17,8 @@ import (
 	. "github.com/streamingfast/cli"
 	"github.com/streamingfast/dstore"
 
-	"github.com/streamingfast/substreams-sink-graphcsv/postgres"
-	"github.com/streamingfast/substreams-sink-graphcsv/schema"
+	"github.com/streamingfast/substreams-graph-load/postgres"
+	"github.com/streamingfast/substreams-graph-load/schema"
 	"go.uber.org/zap"
 )
 

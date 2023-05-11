@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/pflag"
 	. "github.com/streamingfast/cli"
 
-	"github.com/streamingfast/substreams-sink-graphcsv/postgres"
+	"github.com/streamingfast/substreams-graph-load/postgres"
 	"go.uber.org/zap"
 )
 

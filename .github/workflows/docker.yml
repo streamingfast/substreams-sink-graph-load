@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build Binary
-        run: go build -v -o ./substreams-sink-graphcsv ./cmd/substreams-sink-graphcsv
+        run: go build -v -o ./graphload ./cmd/graphload
 
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9

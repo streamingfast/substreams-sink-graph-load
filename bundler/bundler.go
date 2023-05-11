@@ -11,7 +11,7 @@ import (
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/shutter"
 
-	"github.com/streamingfast/substreams-sink-graphcsv/bundler/writer"
+	"github.com/streamingfast/substreams-graph-load/bundler/writer"
 
 	"github.com/streamingfast/bstream"
 	"go.uber.org/zap"
