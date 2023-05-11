@@ -25,6 +25,7 @@ func main() {
 		SinkRunCmd,
 		injectCSVCmd,
 		toCSVCmd,
+		handoffCmd,
 		createIndexesCmd,
 
 		ConfigureViper("SINK_GRAPHCSV"),
