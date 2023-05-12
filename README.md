@@ -99,6 +99,7 @@ Here are a few hints about how to proceed:
 
 * dropping indexes (before injection)
 
+> **Warning** You need to get the DDL of the indexes, using pgdump or whatever tool
 ```
 for entity in $(cd /tmp/substreams-csv && ls); do
     graphman -c /etc/graph-node/config.toml index list QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr $entity |grep -v -- '^-' > ${entity}.indexes
@@ -110,14 +111,24 @@ done
 
 * creating indexes (after injection)
 
-Edit the *.indexes so that this:
+> **Info** You need to craft those DDL files yourself from previous backup with pgdump.. you're on your own!
 
-```
-attr_3_25_pool_total_value_locked_usd_untracked using btree
-  on (total_value_locked_usd_untracked)
+They should look something like this, watch out the `sgd34` should match the correct `sgd...`
+```sql
+-- myentity.ddl
+create index pool_id_block_range_excl on "sgd34"."pool" using gist (id, block_range);
+create index brin_pool on "sgd34"."pool" using brin(lower(block_range), coalesce(upper(block_range), 2147483647), vid);
+create index pool_block_range_closed on "sgd34"."pool"(coalesce(upper(block_range), 2147483647)) where coalesce(upper(block_range), 2147483647) < 2147483647;
+create index attr_3_0_pool_id on "sgd34"."pool" using btree("id");
 ```
 
-becomes this: `create index attr_3_25_pool_total_value_locked_usd_untracked on sgd23.transaction using btree on (total_value_locked_usd_untracked)`
+Then apply them like this:
+```bash
+psql 'postgresql://user:pass@1.2.3.4:5432/db' -f ddls/entity1.ddl
+psql 'postgresql://user:pass@1.2.3.4:5432/db' -f ddls/entity2.ddl
+psql 'postgresql://user:pass@1.2.3.4:5432/db' -f ddls/entity3.ddl
+...
+```
 
 ## LICENSE
 
