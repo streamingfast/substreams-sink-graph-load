@@ -220,8 +220,9 @@ func toHex(in interface{}) string {
 	if err != nil {
 		panic("received invalid data")
 	}
-	return hex.EncodeToString(b)
 
+	out := "\\x"
+	return out + hex.EncodeToString(b)
 }
 
 func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) string {
