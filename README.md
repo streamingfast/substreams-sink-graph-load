@@ -65,6 +65,8 @@ graphman -c /etc/graph-node/config.toml unassign QmABCDEFGHIJKLMNOPQRSTUVWXYZabc
 graphman -c /etc/graph-node/config.toml rewind 0x6a3bb2ef0a20f5503495238e54fef236659f56f1c57e1602b0de2b3d799fe154 12369620 QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr --force
 ```
 
+3. If you are removing indexes, now is the time to do it (see section **Postgresql indexes speedup**)
+
 ### Injecting into postgres and restarting graph-node indexing:
 
 1. Inject the csv files into postgres. List the files in `/tmp/substreams/csv/{entity}`
@@ -81,10 +83,12 @@ done
 graphload handoff QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr 0x0bdf3e2805450d917fbedb4d6f930d34261c3189eb14274e0b113302b28e59fe 17229999 'postgresql://user:password@database.ip:5432/database'
 ```
 
-3. Restart `graph-node` indexing:
+3. If you removed indexes, now you is the time to create them (see section **Postgresql indexes speedup**)
+
+4. Restart `graph-node` indexing:
 
 ```bash
-graphman -c /etc/graph-node/config.toml rewind 0x6a3bb2ef0a20f5503495238e54fef236659f56f1c57e1602b0de2b3d799fe154 12369620 QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr --force
+graphman -c /etc/graph-node/config.toml reassign QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr default
 ```
 
 ## Postgresql indexes speedup
