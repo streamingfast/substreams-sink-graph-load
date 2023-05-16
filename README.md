@@ -39,7 +39,7 @@ graphload run --chain-id=ethereum/mainnet --graphsql-schema=/path/to/schema.grap
 3. Produce the CSV files based on an already-processed dump of entities:
 
 ```bash
-for entity in $(cd /tmp/substreams-entities && ls); do 
+for entity in $(graphload list-entities /path/to/schema.graphql); do 
     graphload tocsv /tmp/susbtreams-entities /tmp/substreams-csv $entity 17230000 --bundle-size=10000 --graphql-schema=/path/to/schema.graphql
 done
 ```
@@ -81,7 +81,7 @@ graphman -c /etc/graph-node/config.toml --start-block QmABCDEFGHIJKLMNOPQRSTUVWX
 1. Inject the csv files into postgres. List the files in `/tmp/substreams/csv/{entity}`
 
 ```bash
-for entity in $(cd /tmp/substreams-csv && ls); do
+for entity in $(graphload list-entities /path/to/schema.graphql); do 
     graphload inject-csv QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr /tmp/substreams-csv $entity /path/to/schema.graphql 'postgresql://user:password@database.ip:5432/database' 12360000 17230000
 done
 ```

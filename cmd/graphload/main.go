@@ -16,6 +16,9 @@ import (
 // Version value, injected via go build `ldflags` at build time
 var version = "dev"
 
+var enableMetrics = false
+var enablePprof = true
+
 func init() {
 	logging.InstantiateLoggers(logging.WithDefaultLevel(zap.InfoLevel))
 }
@@ -27,6 +30,7 @@ func main() {
 		toCSVCmd,
 		handoffCmd,
 		createIndexesCmd,
+		listEntitiesCmd,
 
 		ConfigureViper("SINK_GRAPHCSV"),
 		ConfigureVersion(version),
@@ -46,19 +50,23 @@ func main() {
 					time.Sleep(delay)
 				}
 
-				if v := viper.GetString("global-metrics-listen-addr"); v != "" {
-					zlog.Info("starting prometheus metrics server", zap.String("listen_addr", v))
-					go dmetrics.Serve(v)
+				if enableMetrics {
+					if v := viper.GetString("global-metrics-listen-addr"); v != "" {
+						zlog.Info("starting prometheus metrics server", zap.String("listen_addr", v))
+						go dmetrics.Serve(v)
+					}
 				}
 
-				if v := viper.GetString("global-pprof-listen-addr"); v != "" {
-					go func() {
-						zlog.Info("starting pprof server", zap.String("listen_addr", v))
-						err := http.ListenAndServe(v, nil)
-						if err != nil {
-							zlog.Debug("unable to start profiling server", zap.Error(err), zap.String("listen_addr", v))
-						}
-					}()
+				if enablePprof {
+					if v := viper.GetString("global-pprof-listen-addr"); v != "" {
+						go func() {
+							zlog.Info("starting pprof server", zap.String("listen_addr", v))
+							err := http.ListenAndServe(v, nil)
+							if err != nil {
+								zlog.Debug("unable to start profiling server", zap.Error(err), zap.String("listen_addr", v))
+							}
+						}()
+					}
 				}
 			}
 		}),
