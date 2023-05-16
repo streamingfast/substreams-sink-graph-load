@@ -46,7 +46,7 @@ func handoffE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("connecting to postgres: %w", err)
 	}
 
-	query := fmt.Sprintf(`UPDATE subgraphs.subgraph_deployment set latest_ethereum_block_hash='%s',latest_ethereum_block_number=%d,entity_count=%d where deployment='%s'`,
+	query := fmt.Sprintf(`UPDATE subgraphs.subgraph_deployment set latest_ethereum_block_hash='%s',latest_ethereum_block_number=%d,entity_count=%d,firehose_cursor='' where deployment='%s'`,
 		blockHash,
 		blockNum,
 		1000000,
