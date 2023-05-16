@@ -58,11 +58,20 @@ ls /tmp/substreams-csv/*
 graphman -c /etc/graph-node/config.toml unassign QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 ```
 
-2. rewind to the block BEFORE your module initial block. (You can find the block hash on your favorite explorer).
+2. truncate the data in your newly deployed subgraph by using `graphman rewind` or `sql> truncate`
 
 ```bash
 # for a subgraph/substreams that start at block `12369620`
+
+## Before graphman commit b3e8ad1c1b2446c36b93a47b301bceca69f71dca
+
+# Selecting the block and its hash (from your favorite block explorer) that is one block BELOW the actual startblock
 graphman -c /etc/graph-node/config.toml rewind 0x6a3bb2ef0a20f5503495238e54fef236659f56f1c57e1602b0de2b3d799fe154 12369620 QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr --force
+
+# If your subgraph starts at block 0, you cannot use this 'rewind' technique. You will have to call `truncate` on each of the tables from a Postgresql shell.
+
+## After graphman commit b3e8ad1c1b2446c36b93a47b301bceca69f71dca
+graphman -c /etc/graph-node/config.toml --start-block QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 ```
 
 3. If you are removing indexes, now is the time to do it (see section **Postgresql indexes speedup**)
