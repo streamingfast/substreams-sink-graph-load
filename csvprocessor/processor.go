@@ -138,6 +138,13 @@ func (p *Processor) run(ctx context.Context) error {
 		return fmt.Errorf("unable to walk entity files: %w", err)
 	}
 
+	if len(entitiesToLoad) == 0 {
+		return fmt.Errorf("cannot find any entity to load")
+	}
+	if endRange+1 < p.stopBlock {
+		return fmt.Errorf("entities do not cover the full range (%q -> %d), stop block: %d", entitiesToLoad[0], endRange+1, p.stopBlock)
+	}
+
 	p.logger.Info("found entities file to export",
 		zap.Int("entity_file_seen_count", fileCount),
 		zap.Int("entity_file_to_load", len(entitiesToLoad)),
@@ -156,7 +163,6 @@ func (p *Processor) run(ctx context.Context) error {
 				zap.Int("file_count", idx),
 			)
 		}
-
 	}
 	if endRange >= p.stopBlock-1 {
 		if err := p.flushAllEntities(ctx); err != nil {

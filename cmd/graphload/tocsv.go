@@ -12,9 +12,9 @@ import (
 	. "github.com/streamingfast/cli"
 	"github.com/streamingfast/cli/sflags"
 	"github.com/streamingfast/shutter"
-	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-graph-load/csvprocessor"
 	"github.com/streamingfast/substreams-graph-load/sinker"
+	sink "github.com/streamingfast/substreams-sink"
 	"go.uber.org/zap"
 )
 
@@ -103,6 +103,7 @@ func toCSVE(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := app.Err(); err != nil {
+		zlog.Error("unsuccessful termination", zap.Error(err))
 		return err
 	}
 
