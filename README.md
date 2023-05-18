@@ -110,7 +110,7 @@ Here are a few hints about how to proceed:
 
 > **Warning** You need to get the DDL of the indexes, using pgdump or whatever tool
 ```
-for entity in $(cd /tmp/substreams-csv && ls); do
+for entity in $(graphload list-entities /path/to/schema.graphql); do
     graphman -c /etc/graph-node/config.toml index list QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr $entity |grep -v -- '^-' > ${entity}.indexes
     for idx in $(awk '/^[a-z]/ {print $1}' ${entity}.indexes); do 
         graphman -c /etc/graph-node/config.toml index drop QmABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr $idx
