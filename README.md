@@ -139,6 +139,18 @@ psql 'postgresql://user:pass@1.2.3.4:5432/db' -f ddls/entity3.ddl
 ...
 ```
 
+### Extract indexes
+
+### Creating indexes with graphload command
+```bash
+graphload create ${DEPLOYMENT_HASH} create_indexes.ddl 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
+```
+
+### Deleting indexes with graphload command
+```bash
+graphload delete ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
+```
+
 ## LICENSE
 
 Apache 2.0

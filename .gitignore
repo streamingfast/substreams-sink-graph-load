@@ -8,3 +8,4 @@ devel/eth-block-meta/csv
 /outcsv
 /schema.graphql
 ./substreams-sink-graphcsv
+/create_indexes.ddl

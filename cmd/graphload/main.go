@@ -29,8 +29,10 @@ func main() {
 		injectCSVCmd,
 		toCSVCmd,
 		handoffCmd,
-		createIndexesCmd,
 		listEntitiesCmd,
+		extractIndexesCmd,
+		createIndexesCmd,
+		deleteIndexesCmd,
 
 		ConfigureViper("SINK_GRAPHCSV"),
 		ConfigureVersion(version),

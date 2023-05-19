@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -58,11 +57,11 @@ func injectCSVE(cmd *cobra.Command, args []string) error {
 	case strings.HasPrefix(schemaOrHash, "sgd"):
 		pgSchema = schemaOrHash
 	case strings.HasPrefix(schemaOrHash, "Qm"):
-		sqlxDB, err := createPostgresDB(ctx, postgresDSN)
+		sqlxDB, err := postgres.CreatePostgresDB(ctx, postgresDSN)
 		if err != nil {
 			return fmt.Errorf("creating postgres db: %w", err)
 		}
-		pgSchema, err = getSubgraphSchema(ctx, sqlxDB, schemaOrHash)
+		pgSchema, err = schema.GetSubgraphSchema(ctx, sqlxDB, schemaOrHash)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve specs: %q", err)
 		}
@@ -325,39 +324,6 @@ func injectFilesToLoad(inputStore dstore.Store, tableName string, stopBlockNum, 
 		return nil
 	})
 	return
-}
-
-func createPostgresDB(ctx context.Context, connectionInfo *postgres.DSN) (*sqlx.DB, error) {
-	dsn := connectionInfo.DSN()
-	zlog.Info("connecting to postgres", zap.String("data_source", dsn))
-	dbConnecCtx, dbCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer dbCancel()
-
-	db, err := sqlx.ConnectContext(dbConnecCtx, "postgres", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
-	}
-
-	db.SetMaxOpenConns(250)
-
-	zlog.Info("database connections created")
-	return db, nil
-}
-
-func getSubgraphSchema(ctx context.Context, db *sqlx.DB, deploymentID string) (string, error) {
-	query := `
-	select name AS schema 
-	FROM public.deployment_schemas 
-	WHERE subgraph = $1`
-	row := &subgraphSchemaResponse{}
-	if err := db.GetContext(ctx, row, query, deploymentID); err != nil {
-		return "", fmt.Errorf("fetch schema for %q: %w", deploymentID, err)
-	}
-	return row.Schema, nil
-}
-
-type subgraphSchemaResponse struct {
-	Schema string `db:"schema"`
 }
 
 var blockRangeRegex = regexp.MustCompile(`(\d{10})-(\d{10})`)
