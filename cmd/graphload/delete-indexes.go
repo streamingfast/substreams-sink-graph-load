@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/abourget/llerrgroup"
 	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -41,7 +40,7 @@ func deleteIndexesRun(cmd *cobra.Command, args []string) error {
 		zlog.Debug("postgresql schema", zap.String("sgd", pgSchema))
 	case strings.HasPrefix(schemaOrHash, "Qm"):
 		sqlxDB, err = postgres.CreatePostgresDB(ctx, postgresDSN)
-		sqlxDB.SetMaxOpenConns(10)
+		sqlxDB.SetMaxOpenConns(postgres.MAX_CONNECTIONS)
 		if err != nil {
 			return fmt.Errorf("creating postgres db: %w", err)
 		}
@@ -106,60 +105,27 @@ func deleteIndexesRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("scanning rows: %w", err)
 	}
 
-	lenStmt := 0
-	for _, idxN := range indexNames {
-		lenStmt += len(idxN)
-	}
-
-	logCh := make(chan string, lenStmt)
-	errCh := make(chan error, lenStmt)
-
-	zlog.Debug("launching wait group to delete indexes")
-	llg := llerrgroup.New(10)
-
-	go func() {
-		defer close(logCh)
-		for log := range logCh {
-			zlog.Info(log)
+	for table, idxNames := range indexNames {
+		for _, idx := range idxNames {
+			// indexes that are part of constraints will not be dropped
+			err := dropIndex(sqlxDB, pgSchema, idx)
+			if err != nil {
+				zlog.Error("failed to drop index", zap.String("table", table), zap.String("idx", idx))
+			} else {
+				zlog.Info("dropped index", zap.String("table", table), zap.String("idx", idx))
+			}
 		}
-	}()
 
-	go func() {
-		defer close(errCh)
-		for err := range errCh {
-			zlog.Error("creating index", zap.Error(err))
-		}
-	}()
-
-	for t, idxs := range indexNames {
-		zlog.Debug("launching worker to delete indexes", zap.String("table", t))
-		if llg.Stop() {
-			fmt.Println("ok")
-			continue
-		}
-		table := t
-		idxNames := idxs
-
-		llg.Go(
-			func() error {
-				for _, idx := range idxNames {
-					// indexes that are part of constraints will not be dropped
-					_, err = sqlxDB.Query(fmt.Sprintf("DROP INDEX IF EXISTS %s.%s;", pgSchema, idx))
-					if err != nil {
-						errCh <- err
-					} else {
-						logCh <- fmt.Sprintf("dropped index for table %s indexDef %s", table, idx)
-					}
-				}
-
-				return nil
-			},
-		)
-	}
-
-	if err := llg.Wait(); err != nil {
-		return err
 	}
 
 	return nil
+}
+
+func dropIndex(sqlxDB *sqlx.DB, pgSchema string, idx string) error {
+	rows, err := sqlxDB.Query(fmt.Sprintf("DROP INDEX IF EXISTS %s.%s;", pgSchema, idx))
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	return err
 }

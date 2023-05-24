@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const MAX_CONNECTIONS = 10
+
 func CreatePostgresDB(ctx context.Context, connectionInfo *DSN) (*sqlx.DB, error) {
 	dsn := connectionInfo.DSN()
 	zlog.Info("connecting to postgres", zap.String("data_source", dsn))

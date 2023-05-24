@@ -48,7 +48,7 @@ func createIndexesRun(cmd *cobra.Command, args []string) error {
 		zlog.Debug("postgresql schema", zap.String("sgd", pgSchema))
 	case strings.HasPrefix(schemaOrHash, "Qm"):
 		sqlxDB, err = postgres.CreatePostgresDB(ctx, postgresDSN)
-		sqlxDB.SetMaxOpenConns(10)
+		sqlxDB.SetMaxOpenConns(postgres.MAX_CONNECTIONS)
 		if err != nil {
 			return fmt.Errorf("creating postgres db: %w", err)
 		}
@@ -111,7 +111,7 @@ func createIndexesRun(cmd *cobra.Command, args []string) error {
 	numOfClients := new(int32)
 	*numOfClients = 0
 
-	llg := llerrgroup.New(1)
+	llg := llerrgroup.New(postgres.MAX_CONNECTIONS)
 
 	go func() {
 		defer close(logCh)
@@ -137,7 +137,7 @@ func createIndexesRun(cmd *cobra.Command, args []string) error {
 
 		llg.Go(func() error {
 			for _, indexDef := range idxDefs {
-				_, err = sqlxDB.Query(indexDef)
+				err = createIndex(sqlxDB, indexDef)
 				if err != nil {
 					errCh <- err
 				} else {
@@ -148,11 +148,18 @@ func createIndexesRun(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	fmt.Println("waiting!!")
 	if err := llg.Wait(); err != nil {
 		return err
 	}
-	fmt.Println("done waiting!!")
 
 	return nil
+}
+
+func createIndex(sqlxDB *sqlx.DB, indexDef string) error {
+	rows, err := sqlxDB.Query(indexDef)
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	return err
 }
