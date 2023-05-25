@@ -15,7 +15,7 @@ import (
 
 var extractIndexesCmd = Command(
 	extractIndexesRun,
-	"extract <deployment-hash|sgdx_schema> <psql-dsn> <graphql-schema>",
+	"extract-index <deployment-hash|sgdx_schema> <psql-dsn> <graphql-schema>",
 	"Extract all indexes of a database given a schema name or a deployment hash",
 	ExactArgs(3),
 	Flags(func(flags *pflag.FlagSet) {

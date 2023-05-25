@@ -17,7 +17,7 @@ import (
 
 var createIndexesCmd = Command(
 	createIndexesRun,
-	"create <deployment-hash|sgdx_schema> <create-indexes-filepath> <psql-dsn> <graphql-schema>",
+	"create-index <deployment-hash|sgdx_schema> <create-indexes-filepath> <psql-dsn> <graphql-schema>",
 	"Create all indexes of a database given a schema name or a deployment hash", ExactArgs(4),
 	Flags(func(flags *pflag.FlagSet) {}),
 )

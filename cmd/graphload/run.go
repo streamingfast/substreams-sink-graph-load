@@ -12,9 +12,9 @@ import (
 	. "github.com/streamingfast/cli"
 	"github.com/streamingfast/cli/sflags"
 	"github.com/streamingfast/shutter"
-	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-graph-load/schema"
 	"github.com/streamingfast/substreams-graph-load/sinker"
+	sink "github.com/streamingfast/substreams-sink"
 	"go.uber.org/zap"
 )
 
@@ -111,7 +111,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 
 	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, zlog, tracer)
 	if err != nil {
-		return fmt.Errorf("unable to setup csv sinker: %w", err)
+		return fmt.Errorf("unable to setup entity sinker: %w", err)
 	}
 
 	entitySink.OnTerminating(app.Shutdown)

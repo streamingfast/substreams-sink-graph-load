@@ -143,12 +143,17 @@ psql 'postgresql://user:pass@1.2.3.4:5432/db' -f ddls/entity3.ddl
 
 ### Creating indexes with graphload command
 ```bash
-graphload create ${DEPLOYMENT_HASH} create_indexes.ddl 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
+graphload create-index ${DEPLOYMENT_HASH} create_indexes.ddl 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
 ```
 
 ### Deleting indexes with graphload command
 ```bash
-graphload delete ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
+graphload drop-index ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
+```
+
+### extract indexes with graphload command
+```bash
+graphload extract-index ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
 ```
 
 ## LICENSE

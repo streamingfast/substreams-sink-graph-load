@@ -32,7 +32,7 @@ func main() {
 		listEntitiesCmd,
 		extractIndexesCmd,
 		createIndexesCmd,
-		deleteIndexesCmd,
+		dropIndexesCmd,
 
 		ConfigureViper("SINK_GRAPHCSV"),
 		ConfigureVersion(version),

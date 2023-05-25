@@ -12,14 +12,14 @@ import (
 	"strings"
 )
 
-var deleteIndexesCmd = Command(
-	deleteIndexesRun,
-	"delete <deployment-hash|sgdx_schema> <psql-dsn> <graphql-schema>",
+var dropIndexesCmd = Command(
+	dropIndexesRun,
+	"drop-index <deployment-hash|sgdx_schema> <psql-dsn> <graphql-schema>",
 	"Delete all indexes of a database given a schema name or a deployment hash", ExactArgs(3),
 	Flags(func(flags *pflag.FlagSet) {}),
 )
 
-func deleteIndexesRun(cmd *cobra.Command, args []string) error {
+func dropIndexesRun(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	schemaOrHash := args[0]
