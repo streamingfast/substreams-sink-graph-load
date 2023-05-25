@@ -43,6 +43,7 @@ var SinkRunCmd = Command(sinkRunE,
 		flags.Lookup("irreversible-only").Deprecated = "Renamed to --final-blocks-only"
 
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
+		flags.String("start-block", "", "Start processing at this block instead of the substreams initial block")
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
 		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
 		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
@@ -67,10 +68,14 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	outputModuleName := args[3]
 	stopBlock := args[4]
 
+	startBlock := sflags.MustGetString(cmd, "start-block") // empty string by default makes valid ':endBlock' range
+
+	blockRange := startBlock + ":" + stopBlock
+
 	sink, err := sink.NewFromViper(
 		cmd,
 		sink.IgnoreOutputModuleType,
-		endpoint, manifestPath, outputModuleName, ":"+stopBlock,
+		endpoint, manifestPath, outputModuleName, blockRange,
 		zlog,
 		tracer,
 		sink.WithFinalBlocksOnly(),
