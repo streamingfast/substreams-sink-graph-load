@@ -77,7 +77,7 @@ func NewBigDecimalFromString(s string) (BigDecimal, error) {
 	}
 
 	out := BigDecimal{Int: big_int, Scale: scale}
-	// out.normalizeInPlace()
+	out.normalizeInPlace()
 
 	return out, nil
 }

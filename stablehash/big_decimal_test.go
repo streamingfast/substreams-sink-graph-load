@@ -97,9 +97,6 @@ func TestBigDecimal_IntAndExp(t *testing.T) {
 			actual, err := NewBigDecimalFromString(tt.value)
 			require.NoError(t, err)
 
-			// actual.withPrecisionInPlace(34)
-			actual.normalizeInPlace()
-
 			msg := []any{
 				"For %s [BigInt (expected %s, actual %s), Scale (expected %d, actual %d)]",
 				tt.value,
