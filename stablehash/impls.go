@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/streamingfast/substreams/bigdecimal"
 )
 
 // HashReflect perform stable hashing of value using reflecting to determine the type.
@@ -271,10 +273,21 @@ func (m MapUnsafe[K, V]) StableHash(addr FieldAddress, hasher Hasher) {
 	}
 }
 
+type BigDecimal bigdecimal.BigDecimal
+
+func NewBigDecimalFromString(in string) (*BigDecimal, error) {
+	out, err := bigdecimal.NewFromString(in)
+	if err != nil {
+		return nil, err
+	}
+
+	return (*BigDecimal)(out), nil
+}
+
 // StableHash for BigDecimal, ported from `graph-node`.
 //
 // See https://github.com/graphprotocol/graph-node/blob/9d013f75f2a565e3d126737593e3a30d1b2f212e/graph/src/data/store/scalar.rs#L215
-func (b BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
+func (b *BigDecimal) StableHash(addr FieldAddress, hasher Hasher) {
 	I64(b.Scale).StableHash(addr.Child(1), hasher)
 
 	// Normally it would be a red flag to pass field_address in after having used a child slot.
