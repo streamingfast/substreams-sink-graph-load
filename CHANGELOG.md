@@ -7,4 +7,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-* `substreams-graphload run` now accepts `+<count>` like `+10_000` to run for 10 000 relative to module's start block.
+* `graphload run` now accepts `+<count>` like `+10_000` to run for 10 000 relative to module's start block.
