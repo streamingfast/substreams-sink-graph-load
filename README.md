@@ -156,6 +156,3 @@ graphload drop-index ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.
 graphload extract-index ${DEPLOYMENT_HASH} 'postgresql://${USER}:${PASSWORD}@127.0.0.1:5432/graph-node?sslmode=disable' path_to_schema_graphql_file
 ```
 
-## LICENSE
-
-Apache 2.0
