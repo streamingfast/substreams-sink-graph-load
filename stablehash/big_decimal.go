@@ -84,11 +84,12 @@ func NewBigDecimalFromString(s string) (BigDecimal, error) {
 
 func (b *BigDecimal) isZero() bool {
 	// The `Sign` calls on big.Int returns 0 if number is equal 0 (-1 or 1 otherwise)
-	return b.Scale == 0 && b.Int.Sign() == 0
+	return b.Int.Sign() == 0
 }
 
 func (b *BigDecimal) normalizeInPlace() {
 	if b.isZero() {
+		b.Scale = 0
 		return
 	}
 
