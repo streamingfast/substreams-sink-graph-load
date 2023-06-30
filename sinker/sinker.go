@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -13,12 +14,12 @@ import (
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
-	sink "github.com/streamingfast/substreams-sink"
 	"github.com/streamingfast/substreams-graph-load/bundler"
 	"github.com/streamingfast/substreams-graph-load/bundler/writer"
 	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/streamingfast/substreams-graph-load/poi"
 	"github.com/streamingfast/substreams-graph-load/schema"
+	sink "github.com/streamingfast/substreams-sink"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -49,6 +50,7 @@ func New(
 	bundleSize uint64,
 	bufferSize uint64,
 	chainID string,
+	startPOI []byte,
 	logger *zap.Logger,
 	tracer logging.Tracer,
 ) (*EntitiesSink, error) {
@@ -61,6 +63,7 @@ func New(
 		Shutter: shutter.New(),
 		Sinker:  sink,
 
+		lastPOI:      startPOI,
 		fileBundlers: make(map[string]*bundler.Bundler),
 		destFolder:   destFolder,
 		logger:       logger,
@@ -263,6 +266,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		s.poiBundler.Writer().Write(jsonlPOI)
 
 		s.lastPOI = poi
+		fmt.Println(data.Clock.Number, "lastpoi is now", hex.EncodeToString(s.lastPOI))
 	}
 	s.stats.RecordBlock(cursor.Block().Num())
 	s.stats.RecordLastBlockHash(cursor.Block().ID())

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,6 +46,7 @@ var SinkRunCmd = Command(sinkRunE,
 
 		flags.Uint64("bundle-size", 1000, "Size of output bundle, in blocks")
 		flags.String("start-block", "", "Start processing at this block instead of the substreams initial block")
+		flags.BytesHex("start-poi", nil, "When a start-block is given, you must provide the last POI processed before that block")
 		flags.String("entities", "", "Comma-separated list of entities to process (alternative to providing the subgraph manifest)")
 		flags.String("graphql-schema", "", "Path to graphql schema to read the list of entities automatically (alternative to setting 'entities' value)")
 		flags.String("working-dir", "./workdir", "Path to local folder used as working directory")
@@ -67,10 +70,33 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 	manifestPath := args[2]
 	outputModuleName := args[3]
 	stopBlock := args[4]
+	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
 
 	startBlock := sflags.MustGetString(cmd, "start-block") // empty string by default makes valid ':endBlock' range
+	if startBlock != "" {
+		startUint, err := strconv.ParseUint(startBlock, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse startblock %q: %w", startBlock, err)
+		}
+		if startUint%bundleSize != 0 {
+			return fmt.Errorf("provided startBlock %q, is not aligned with the bundleSize boundary %d", startBlock, bundleSize)
+		}
+	}
 
 	blockRange := startBlock + ":" + stopBlock
+
+	var startPOI []byte
+	if startBlock != "" {
+		startPOIStr := sflags.MustGetString(cmd, "start-poi")
+		if startPOIStr == "" {
+			return fmt.Errorf("when providing a start-block, you must also provide the start-poi")
+		}
+		s, err := hex.DecodeString(startPOIStr)
+		if err != nil {
+			return fmt.Errorf("cannot decode startPOI %q: %w", startPOIStr, err)
+		}
+		startPOI = s
+	}
 
 	sink, err := sink.NewFromViper(
 		cmd,
@@ -90,7 +116,6 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("sink only supports map module with output type %q (or %q) but selected module %q output type is %q", SUPPORTED_MODULE_TYPE, LEGACY_MODULE_TYPE, outputModuleName, outputModuleType)
 	}
 
-	bundleSize := sflags.MustGetUint64(cmd, "bundle-size")
 	bufferSize := uint64(10 * 1024) // too high, this wrecks havoc
 	workingDir := sflags.MustGetString(cmd, "working-dir")
 	chainID := sflags.MustGetString(cmd, "chain-id")
@@ -114,7 +139,7 @@ func sinkRunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, zlog, tracer)
+	entitySink, err := sinker.New(sink, destFolder, workingDir, entities, bundleSize, bufferSize, chainID, startPOI, zlog, tracer)
 	if err != nil {
 		return fmt.Errorf("unable to setup entity sinker: %w", err)
 	}
