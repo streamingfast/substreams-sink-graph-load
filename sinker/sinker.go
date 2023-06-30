@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -266,7 +265,6 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 		s.poiBundler.Writer().Write(jsonlPOI)
 
 		s.lastPOI = poi
-		fmt.Println(data.Clock.Number, "lastpoi is now", hex.EncodeToString(s.lastPOI))
 	}
 	s.stats.RecordBlock(cursor.Block().Num())
 	s.stats.RecordLastBlockHash(cursor.Block().ID())
