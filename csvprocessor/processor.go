@@ -237,7 +237,13 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 		switch ch.EntityChange.Operation {
 		case pbentity.EntityChange_CREATE:
 			if found {
-				return fmt.Errorf("@%d got CREATE on entity %q but it already exists since block %d", ch.BlockNum, ch.EntityChange.ID, prev.StartBlock)
+				if err := newEnt.ValidateFields(p.entityDesc); err != nil {
+					return fmt.Errorf("@%d during CREATE: %w", ch.BlockNum, err)
+				}
+
+				prev.Update(newEnt)
+				continue
+				//return fmt.Errorf("@%d got CREATE on entity %q but it already exists since block %d", ch.BlockNum, ch.EntityChange.ID, prev.StartBlock)
 			}
 
 			if err := newEnt.ValidateFields(p.entityDesc); err != nil {
