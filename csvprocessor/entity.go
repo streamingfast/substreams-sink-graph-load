@@ -43,6 +43,10 @@ func (e *Entity) ValidateFields(desc *schema.EntityDesc) error {
 				return nil
 			}
 
+			if field.Type == "String_" {
+				return nil
+			}
+
 			return fmt.Errorf("field %q cannot be nil on entity %s at ID %s", field.Name, field.Type, e.Fields["id"])
 		}
 	}
