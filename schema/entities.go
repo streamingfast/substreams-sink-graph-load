@@ -67,7 +67,7 @@ func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
 		Input: string(graphqlSchemaContent),
 	})
 	if gqlErr != nil {
-		return nil, fmt.Errorf("parsing gql: %w", gqlErr)
+		return nil, fmt.Errorf("getting entity names: parsing gql: %w", gqlErr)
 	}
 
 	for _, def := range graphqlSchemaDoc.Definitions {
@@ -88,7 +88,7 @@ func getEntitiesFromSchemaData(graphqlSchemaContent []byte) (entities []*EntityD
 		Input: string(graphqlSchemaContent),
 	})
 	if gqlErr != nil {
-		return nil, fmt.Errorf("parsing gql: %w", gqlErr)
+		return nil, fmt.Errorf("parsing schema content: %w", gqlErr)
 	}
 
 	for _, def := range graphqlSchemaDoc.Definitions {
