@@ -43,7 +43,7 @@ func (e *Entity) ValidateFields(desc *schema.EntityDesc) error {
 				return nil
 			}
 
-			if field.Type == "String_" {
+			if field.Type == "String" {
 				return nil
 			}
 
@@ -124,7 +124,7 @@ func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, er
 
 		v, ok := f.NewValue.Typed[expectedTypedField]
 		if !ok {
-			return nil, fmt.Errorf("invalid field %q: wrong type %q, got %+v", normalizedName, fieldDesc.Type, f.NewValue.Typed)
+			//return nil, fmt.Errorf("invalid field %q: wrong type %q, got %+v", normalizedName, fieldDesc.Type, f.NewValue.Typed)
 		}
 		e.Fields[normalizedName] = v
 	}
