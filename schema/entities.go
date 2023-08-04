@@ -83,12 +83,7 @@ func GetEntityNamesFromSchema(filename string) (entities []string, err error) {
 	return
 }
 
-func GetEntitiesFromSchema(filename string) (entities []*EntityDesc, err error) {
-	graphqlSchemaContent, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-
+func getEntitiesFromSchemaData(graphqlSchemaContent []byte) (entities []*EntityDesc, err error) {
 	graphqlSchemaDoc, gqlErr := parser.ParseSchema(&ast.Source{
 		Input: string(graphqlSchemaContent),
 	})
@@ -129,6 +124,15 @@ func GetEntitiesFromSchema(filename string) (entities []*EntityDesc, err error) 
 	})
 
 	return
+}
+
+func GetEntitiesFromSchema(filename string) (entities []*EntityDesc, err error) {
+	graphqlSchemaContent, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	return getEntitiesFromSchemaData(graphqlSchemaContent)
 }
 
 func parseEntity(def *ast.Definition) (*EntityDesc, error) {

@@ -91,6 +91,7 @@ func New(
 		}
 	}
 	if p.entityDesc == nil {
+		logger.Info("cannot find entity in schema", zap.String("entity", entity), zap.String("schema", schemaFilename), zap.Any("entities", entities))
 		return nil, fmt.Errorf("cannot find entity %q in schema %q", entity, schemaFilename)
 	}
 
