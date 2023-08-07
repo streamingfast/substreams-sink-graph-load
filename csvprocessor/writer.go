@@ -252,7 +252,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 	case schema.FieldTypeBigInt:
 		if f == nil {
 			if isNullable {
-				return "NULL"
+				return "0"
 			}
 			return "0"
 		}
@@ -263,7 +263,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 	case schema.FieldTypeBigDecimal:
 		if f == nil {
 			if isNullable {
-				return "NULL"
+				return "0"
 			}
 			return "0"
 		}
@@ -274,7 +274,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 	case schema.FieldTypeInt:
 		if f == nil {
 			if isNullable {
-				return "NULL"
+				return "0"
 			}
 			return "0"
 		}
@@ -297,7 +297,7 @@ func formatField(f interface{}, t schema.FieldType, isArray, isNullable bool) st
 	case schema.FieldTypeBoolean:
 		if f == nil {
 			if isNullable {
-				return "NULL"
+				return "false"
 			}
 			return "false"
 		}
