@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	SUPPORTED_MODULE_TYPE = "sf.substreams.entity.v1.EntityChanges"
-	LEGACY_MODULE_TYPE    = "substreams.entity.v1.EntityChanges"
+	SUPPORTED_MODULE_TYPE = "sf.substreams.sink.entity.v1.EntityChanges"
+	LEGACY_MODULE_TYPE    = "sf.substreams.entity.v1.EntityChanges"
 )
 
 var SinkRunCmd = Command(sinkRunE,

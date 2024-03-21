@@ -3,12 +3,17 @@ package bundler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/proto"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type Encoder func(proto.Message) ([]byte, error)
 
 func JSONLEncode(message proto.Message) ([]byte, error) {
+	return JSONLEncodeAny(message)
+}
+
+func JSONLEncodeAny(message any) ([]byte, error) {
 	buf := []byte{}
 	data, err := json.Marshal(message)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
+	pbentity "github.com/streamingfast/substreams-sink-entity-changes/pb/sf/substreams/sink/entity/v1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestProofOfIndexing(t *testing.T) {
 	poi.SetEntity(&pbentity.EntityChange{
 		Entity:    "BlockMeta",
 		Id:        "day:first:20150730",
-		Operation: pbentity.EntityChange_CREATE,
+		Operation: pbentity.EntityChange_OPERATION_CREATE,
 		Fields: []*pbentity.Field{
 			field("at", "2015-07-30 00:00:00"),
 			field("number", big.NewInt(1)),

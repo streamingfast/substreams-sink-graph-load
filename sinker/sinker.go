@@ -13,12 +13,13 @@ import (
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
+	graphload "github.com/streamingfast/substreams-graph-load"
 	"github.com/streamingfast/substreams-graph-load/bundler"
 	"github.com/streamingfast/substreams-graph-load/bundler/writer"
-	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/streamingfast/substreams-graph-load/poi"
 	"github.com/streamingfast/substreams-graph-load/schema"
 	sink "github.com/streamingfast/substreams-sink"
+	pbentity "github.com/streamingfast/substreams-sink-entity-changes/pb/sf/substreams/sink/entity/v1"
 	pbsubstreamsrpc "github.com/streamingfast/substreams/pb/sf/substreams/rpc/v2"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -231,7 +232,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 	proofOfIndexing := poi.NewProofOfIndexing(data.Clock.Number, poi.VersionFast)
 
 	for _, change := range entityChanges.EntityChanges {
-		jsonlChange, err := bundler.JSONLEncode(&pbentity.EntityChangeAtBlockNum{
+		jsonlChange, err := bundler.JSONLEncodeAny(&graphload.EntityChangeAtBlockNum{
 			EntityChange: change,
 			BlockNum:     data.Clock.Number,
 		})
@@ -258,7 +259,7 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 
 	if !bytes.Equal(poi, s.lastPOI) {
 		poiEntity := getPOIEntity(poi, s.chainID, data.Clock.Number)
-		jsonlPOI, err := bundler.JSONLEncode(poiEntity)
+		jsonlPOI, err := bundler.JSONLEncodeAny(poiEntity)
 		if err != nil {
 			return err
 		}
@@ -274,13 +275,13 @@ func (s *EntitiesSink) handleBlockScopedData(ctx context.Context, data *pbsubstr
 
 func addEntityChangeToPOI(proofOfIndexing *poi.ProofOfIndexing, change *pbentity.EntityChange) error {
 	switch change.Operation {
-	case pbentity.EntityChange_CREATE, pbentity.EntityChange_UPDATE, pbentity.EntityChange_FINAL:
+	case pbentity.EntityChange_OPERATION_CREATE, pbentity.EntityChange_OPERATION_UPDATE, pbentity.EntityChange_OPERATION_FINAL:
 		proofOfIndexing.SetEntity(change)
 
-	case pbentity.EntityChange_DELETE:
+	case pbentity.EntityChange_OPERATION_DELETE:
 		proofOfIndexing.RemoveEntity(change)
 
-	case pbentity.EntityChange_UNSET:
+	case pbentity.EntityChange_OPERATION_UNSPECIFIED:
 		return fmt.Errorf("received %q operation which is should never be sent", change.Operation)
 	}
 
@@ -291,14 +292,14 @@ func (s *EntitiesSink) handleBlockUndoSignal(ctx context.Context, data *pbsubstr
 	return fmt.Errorf("received undo signal: should not happen, substreams connection should be 'final-blocks-only'")
 }
 
-func getPOIEntity(digest []byte, chainID string, blockNum uint64) *pbentity.EntityChangeAtBlockNum {
-	return &pbentity.EntityChangeAtBlockNum{
+func getPOIEntity(digest []byte, chainID string, blockNum uint64) *graphload.EntityChangeAtBlockNum {
+	return &graphload.EntityChangeAtBlockNum{
 		BlockNum: blockNum,
 		EntityChange: &pbentity.EntityChange{
 			Entity: schema.PoiEntityName,
 			Id:     chainID,
 			// Ordinal
-			Operation: pbentity.EntityChange_UPDATE,
+			Operation: pbentity.EntityChange_OPERATION_UPDATE,
 			Fields: []*pbentity.Field{
 				{
 					Name: "digest",

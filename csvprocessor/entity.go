@@ -3,8 +3,8 @@ package csvprocessor
 import (
 	"fmt"
 
-	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/streamingfast/substreams-graph-load/schema"
+	pbentity "github.com/streamingfast/substreams-sink-entity-changes/pb/sf/substreams/sink/entity/v1"
 )
 
 const FieldTypeBigint = "Bigint"
@@ -46,7 +46,7 @@ func (e *Entity) ValidateFields(desc *schema.EntityDesc) error {
 }
 
 func newEntity(in *EntityChangeAtBlockNum, desc *schema.EntityDesc) (*Entity, error) {
-	if in.EntityChange.Operation == pbentity.EntityChange_DELETE {
+	if in.EntityChange.Operation == pbentity.EntityChange_OPERATION_DELETE {
 		return nil, nil
 	}
 

@@ -13,8 +13,8 @@ import (
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/logging"
 	"github.com/streamingfast/shutter"
-	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/streamingfast/substreams-graph-load/schema"
+	pbentity "github.com/streamingfast/substreams-sink-entity-changes/pb/sf/substreams/sink/entity/v1"
 	"go.uber.org/zap"
 )
 
@@ -235,7 +235,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 		prev, found := p.entities[ch.EntityChange.ID]
 
 		switch ch.EntityChange.Operation {
-		case pbentity.EntityChange_CREATE:
+		case pbentity.EntityChange_OPERATION_CREATE:
 			if found {
 				return fmt.Errorf("@%d got CREATE on entity %q but it already exists since block %d", ch.BlockNum, ch.EntityChange.ID, prev.StartBlock)
 			}
@@ -252,7 +252,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			}
 			p.entities[ch.EntityChange.ID] = newEnt
 
-		case pbentity.EntityChange_UPDATE:
+		case pbentity.EntityChange_OPERATION_UPDATE:
 			if p.entityDesc.Immutable {
 				if err := newEnt.ValidateFields(p.entityDesc); err != nil {
 					return fmt.Errorf("@%d during UPDATE to an immutable entity: %w", ch.BlockNum, err)
@@ -282,7 +282,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			prev.Update(newEnt)
 			p.entities[ch.EntityChange.ID] = prev
 
-		case pbentity.EntityChange_DELETE:
+		case pbentity.EntityChange_OPERATION_DELETE:
 			if p.entityDesc.Immutable {
 				return fmt.Errorf("entity %q got deleted but should be immutable", ch.EntityChange.ID)
 			}
@@ -295,7 +295,7 @@ func (p *Processor) processEntityFile(ctx context.Context, filename string) erro
 			}
 			delete(p.entities, ch.EntityChange.ID)
 
-		case pbentity.EntityChange_FINAL:
+		case pbentity.EntityChange_OPERATION_FINAL:
 			if p.entityDesc.Immutable {
 				continue
 			}

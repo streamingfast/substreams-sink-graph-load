@@ -1,8 +1,8 @@
 package poi
 
 import (
-	pbentity "github.com/streamingfast/substreams-graph-load/pb/entity/v1"
 	"github.com/streamingfast/substreams-graph-load/stablehash"
+	pbentity "github.com/streamingfast/substreams-sink-entity-changes/pb/sf/substreams/sink/entity/v1"
 )
 
 type ProofOfIndexingEvent interface {
@@ -15,11 +15,11 @@ func NewProofOfIndexingSetEntity(entity *pbentity.EntityChange) ProofOfIndexingS
 	event := ProofOfIndexingSetEntity{
 		EntityType: entity.Entity,
 		EntityID:   entity.Id,
-		Data:       make(stablehash.Map[string, *pbentity.Value], len(entity.Fields)),
+		Data:       make(stablehash.Map[string, *EntityValue], len(entity.Fields)),
 	}
 
 	for _, field := range entity.Fields {
-		event.Data[field.Name] = field.NewValue
+		event.Data[field.Name] = (*EntityValue)(field.NewValue)
 	}
 
 	return event
@@ -28,7 +28,7 @@ func NewProofOfIndexingSetEntity(entity *pbentity.EntityChange) ProofOfIndexingS
 type ProofOfIndexingSetEntity struct {
 	EntityType string
 	EntityID   string
-	Data       stablehash.Map[string, *pbentity.Value]
+	Data       stablehash.Map[string, *EntityValue]
 }
 
 // StableHash implements ProofOfIndexingEvent
