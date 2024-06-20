@@ -28,7 +28,7 @@ var toCSVCmd = Command(toCSVE,
 		Arguments:
 		- <source_folder>: Folder containing one folder per entity with jsonl files, created with 'run' command.
 		- <destination_folder>: Folder where CSV files will be created (a subfolder named as the entity will be automatically appended)
-		- <entity>: Name of the entity (ex: 'transfers') that will be processed. You need to run one instance of 'tocsv' per instance.
+		- <entity>: Name of the entity (ex: 'transfers') that will be processed. You need to run one instance of 'tocsv' per entity.
 		- <stop_block>: Where you want to stop creating CSV (usually, very close to chain HEAD)
 	`),
 	ExactArgs(4),

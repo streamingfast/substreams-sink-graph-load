@@ -140,7 +140,7 @@ func (p *Processor) run(ctx context.Context) error {
 	}
 
 	if len(entitiesToLoad) == 0 {
-		return fmt.Errorf("cannot find any entity to load")
+		return fmt.Errorf("cannot find any entity to load after walking %d files", fileCount)
 	}
 	if endRange+1 < p.stopBlock {
 		return fmt.Errorf("entities do not cover the full range (%q -> %d), stop block: %d", entitiesToLoad[0], endRange+1, p.stopBlock)
