@@ -6,7 +6,6 @@ require (
 	github.com/abourget/llerrgroup v0.2.0
 	github.com/drone/envsubst v1.0.3
 	github.com/ettle/strcase v0.1.1
-	github.com/golang/protobuf v1.5.3
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.2
@@ -18,11 +17,12 @@ require (
 	github.com/streamingfast/cli v0.0.4-0.20231213015719-421ef5a6f4bd
 	github.com/streamingfast/dhammer v0.0.0-20220506192416-3797a7906da2
 	github.com/streamingfast/dmetrics v0.0.0-20240214191810-524a5c58fbaa
-	github.com/streamingfast/dstore v0.1.1-0.20240215171730-493ad5a0f537
+	github.com/streamingfast/dstore v0.1.1-0.20240620153430-eed62359d64c
 	github.com/streamingfast/logging v0.0.0-20230608130331-f22c91403091
 	github.com/streamingfast/shutter v1.5.0
 	github.com/streamingfast/substreams v1.3.7
 	github.com/streamingfast/substreams-sink v0.3.4
+	github.com/streamingfast/substreams-sink-entity-changes v1.3.2
 	github.com/stretchr/testify v1.8.4
 	github.com/vektah/gqlparser v1.3.1
 	github.com/zeebo/xxh3 v1.0.2
@@ -59,6 +59,7 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -120,7 +121,6 @@ require (
 	github.com/streamingfast/dgrpc v0.0.0-20240219152146-57bb131c39ca // indirect
 	github.com/streamingfast/opaque v0.0.0-20210811180740-0c01d37ea308 // indirect
 	github.com/streamingfast/pbgo v0.0.6-0.20231120172814-537d034aad5e // indirect
-	github.com/streamingfast/substreams-sink-entity-changes v1.3.2 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/teris-io/shortid v0.0.0-20171029131806-771a37caa5cf // indirect
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect

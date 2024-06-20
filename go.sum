@@ -471,8 +471,8 @@ github.com/streamingfast/dhammer v0.0.0-20220506192416-3797a7906da2 h1:/mcLVdwy6
 github.com/streamingfast/dhammer v0.0.0-20220506192416-3797a7906da2/go.mod h1:MyG3U4ABuf7ANS8tix+e8UUevN7B9juhEnAbslS/X3M=
 github.com/streamingfast/dmetrics v0.0.0-20240214191810-524a5c58fbaa h1:PJkLMu6Own6V5qYwJDQHgRBCTTW2CxV4xxADMXfw+0M=
 github.com/streamingfast/dmetrics v0.0.0-20240214191810-524a5c58fbaa/go.mod h1:JbxEDbzWRG1dHdNIPrYfuPllEkktZMgm40AwVIBENcw=
-github.com/streamingfast/dstore v0.1.1-0.20240215171730-493ad5a0f537 h1:HWqY7nS+kmQXPjcASsMr6n4rGYQvMc1iJEv4/+EL1O0=
-github.com/streamingfast/dstore v0.1.1-0.20240215171730-493ad5a0f537/go.mod h1:ngKU7WzHwVjOFpt2g+Wtob5mX4IvN90HYlnARcTRbmQ=
+github.com/streamingfast/dstore v0.1.1-0.20240620153430-eed62359d64c h1:PCu6/sDzkKH+CaP3FkTvmqpQ93ESAFj5Yg1j7WDHbRU=
+github.com/streamingfast/dstore v0.1.1-0.20240620153430-eed62359d64c/go.mod h1:ngKU7WzHwVjOFpt2g+Wtob5mX4IvN90HYlnARcTRbmQ=
 github.com/streamingfast/logging v0.0.0-20210811175431-f3b44b61606a/go.mod h1:4GdqELhZOXj4xwc4IaBmzofzdErGynnaSzuzxy0ZIBo=
 github.com/streamingfast/logging v0.0.0-20220222131651-12c3943aac2e/go.mod h1:4GdqELhZOXj4xwc4IaBmzofzdErGynnaSzuzxy0ZIBo=
 github.com/streamingfast/logging v0.0.0-20220304214715-bc750a74b424/go.mod h1:VlduQ80JcGJSargkRU4Sg9Xo63wZD/l8A5NC/Uo1/uU=
